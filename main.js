@@ -1,5 +1,6 @@
 const { app, BrowserWindow, ipcMain } = require("electron");
 const bcrypt = require("bcrypt");
+const path = require("path");
 
 let store; // Will hold the electron-store instance
 let mainWindow; // Keep reference to main window
@@ -187,7 +188,10 @@ ipcMain.handle("remove-students", (event, idsToRemove) => {
 async function createWindow() {
   // Dynamically import electron-store
   const Store = (await import("electron-store")).default;
-  store = new Store();
+  store = new Store({
+    cwd: path.join(__dirname, "data"), // Creates a 'data' folder in your project
+    name: "user_data", // Saves as user_data.json
+  });
 
   // MIGRATION: Move old students data if it exists
   const oldStudents = store.get("students");
@@ -197,15 +201,23 @@ async function createWindow() {
     store.delete("students");
     console.log("Old student data removed. Users will start with empty lists.");
   }
+  app.setAppUserModelId("com.escs.checkout");
 
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
+    title: "Easy Student Checkout System (ESCS)",
+
+    icon: "./project_icon.ico",
+    autoHideMenuBar: true,
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
     },
   });
+
+  // Maximize the window on startup
+  mainWindow.maximize();
 
   // Handle window focus when page loads
   mainWindow.webContents.on("did-finish-load", () => {

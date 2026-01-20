@@ -2,6 +2,9 @@
 node_modules/
 jspm_packages/
 
+# Storage
+data/
+
 # Build and Packaging outputs
 dist/
 release/
