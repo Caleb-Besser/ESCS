@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Library Checkout - Login</title>
+    <link rel="stylesheet" href="login.css" />
+  </head>
+  <body>
+    <div class="login-container">
+      <div class="logo-section">
+        <h1>Library Checkout</h1>
+        <p>Manage your student book checkouts</p>
+      </div>
+
+      <h2 id="form-title">Login</h2>
+
+      <div class="error" id="error-message"></div>
+
+      <form id="auth-form">
+        <div class="input-group">
+          <label for="email">Email</label>
+          <input type="email" id="email" required autocomplete="email" />
+        </div>
+
+        <div class="input-group">
+          <label for="password">Password</label>
+          <input
+            type="password"
+            id="password"
+            required
+            autocomplete="current-password"
+            minlength="6"
+          />
+        </div>
+
+        <div class="remember-me">
+          <input type="checkbox" id="remember-me" />
+          <label for="remember-me">Remember me for 15 days</label>
+        </div>
+
+        <button type="submit" id="submit-btn">
+          <span id="btn-text">Login</span>
+        </button>
+      </form>
+
+      <div class="toggle-link">
+        <span id="toggle-text">Don't have an account?</span>
+        <a id="toggle-link">Register</a>
+      </div>
+    </div>
+
+    <script src="login.js"></script>
+  </body>
+</html>
