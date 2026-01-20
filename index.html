@@ -3,34 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Library Checkout System</title>
+    <title>Easy Student Checkout System (ESCS)</title>
     <link rel="stylesheet" href="style.css" />
     <link rel="stylesheet" href="print.css" />
   </head>
 
   <body>
-    <div class="sidebar">
-      <div class="sidebar-header">
-        <div class="header-top">
-          <img src="project_icon.png" class="sidebar-logo" alt="Project Logo" />
-
-          <button id="logout-btn" class="logout-button" title="Logout">
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-              <polyline points="16 17 21 12 16 7"></polyline>
-              <line x1="21" y1="12" x2="9" y2="12"></line>
-            </svg>
-          </button>
-        </div>
-      </div>
-
+    <!-- Sidebar - Always visible -->
+    <div class="sidebar" id="main-sidebar">
+      <!-- Remove toggle button from here -->
       <div class="select-all-row">
         <label class="select-all-label">
           <input type="checkbox" id="select-all-checkbox" />
@@ -147,36 +128,54 @@
       <div class="student-list" id="students"></div>
     </div>
 
+    <!-- Main Content -->
     <div class="main-content">
+      <!-- Top Bar -->
       <div class="top-bar">
-        <div class="student-header">
-          <div class="student-name-large" id="selected-student-name">
-            Select a student
-          </div>
-          <div class="student-id" id="selected-student-id"></div>
+        <div class="app-header">
+          <img src="project_icon.ico" alt="ESCS Icon" class="app-icon" />
+          <span class="app-name">ESCS</span>
         </div>
-        <div class="barcode-input-container">
-          <label class="barcode-label">SCAN OR ENTER BARCODE</label>
+
+        <div class="center-content">
+          <div class="state-indicator" id="state-indicator"></div>
+          <div class="barcode-input-container"></div>
+        </div>
+
+        <div class="top-right">
+          <button id="logout-btn" class="logout-button" title="Logout">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+              <polyline points="16 17 21 12 16 7"></polyline>
+              <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
+          </button>
         </div>
       </div>
 
+      <!-- Welcome Message Container (NEW) -->
+      <div class="welcome-container" id="welcome-container">
+        <!-- Welcome message will be inserted here by renderer.js -->
+      </div>
+
+      <!-- Books Area -->
       <div class="books-area">
-        <div class="books-header" id="books-header">Checked Out Books</div>
+        <div class="books-header" id="books-header"></div>
         <div class="books-grid" id="selected-books-list"></div>
       </div>
 
-      <div class="controls">
-        <input
-          type="text"
-          id="new-student-name"
-          placeholder="New student name"
-        />
-        <button id="add-student">Add</button>
-        <button id="remove-student">Remove</button>
-        <button id="print">Print</button>
-      </div>
+      <!-- Dynamic Controls -->
+      <div class="dynamic-controls" id="dynamic-controls"></div>
     </div>
 
+    <!-- Confirm Modal -->
     <div id="confirm-modal" class="modal-overlay">
       <div class="modal-content">
         <h3 id="confirm-title">Confirm Action</h3>
@@ -187,6 +186,28 @@
           </button>
           <button id="confirm-ok" class="modal-btn modal-btn-confirm">
             Confirm
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add Student Modal -->
+    <div id="add-student-modal" class="modal-overlay">
+      <div class="modal-content">
+        <h3>Add New Student</h3>
+        <p>Enter the student's name:</p>
+        <input
+          type="text"
+          id="add-student-name-input"
+          placeholder="Student Name"
+          class="modal-input"
+        />
+        <div class="modal-buttons">
+          <button id="add-student-cancel" class="modal-btn modal-btn-cancel">
+            Cancel
+          </button>
+          <button id="add-student-confirm" class="modal-btn modal-btn-confirm">
+            Add Student
           </button>
         </div>
       </div>
