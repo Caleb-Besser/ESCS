@@ -1,0 +1,75 @@
+/* General print layout */
+body {
+  margin: 0;
+  padding: 0;
+  font-family: Arial, sans-serif;
+  color: #000;
+  background: #fff;
+}
+
+/* Page container */
+.print-cards-page {
+  width: 8.5in; /* Standard letter width */
+  height: 11in; /* Standard letter height */
+  display: flex;
+  flex-wrap: wrap;
+  padding: 0.5in;
+  box-sizing: border-box;
+}
+
+/* Individual card (ID size) */
+.print-card {
+  width: 3.375in; /* ~ID card width */
+  height: 2.125in; /* ~ID card height */
+  border: 1px solid #000;
+  border-radius: 0.1in;
+  margin: 0.125in;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: #fff;
+  color: #000;
+  font-size: 12pt;
+  box-sizing: border-box;
+  padding: 0.15in;
+}
+
+/* Name styling */
+.print-card .print-name {
+  font-weight: bold;
+  font-size: 14pt;
+  text-align: center;
+  margin-bottom: 0.1in;
+}
+
+/* ID styling */
+.print-card .print-id {
+  font-size: 10pt;
+  color: #333;
+  margin-top: 0.05in;
+  text-align: center;
+  letter-spacing: 1px;
+}
+
+/* Barcode styling */
+.print-card .print-barcode svg {
+  width: 90%;
+  height: auto;
+  margin-top: 0.1in;
+  display: block;
+  fill: #000;
+}
+
+/* Remove color, shadows, or gradients */
+.print-card *,
+.print-card {
+  color: #000 !important;
+  background: #fff !important;
+  box-shadow: none !important;
+}
+
+/* Force page breaks */
+.print-cards-page {
+  page-break-after: always;
+}
