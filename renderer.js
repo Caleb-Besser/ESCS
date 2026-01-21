@@ -35,6 +35,257 @@ window.onload = async () => {
       svg.setAttribute("height", "60");
       return svg;
     }
+    // Add this function to renderer.js (somewhere near the other functions)
+    function showStudentHistoryModal(studentId, studentName) {
+      return new Promise(async (resolve) => {
+        // Get history data
+        const history = await ipcRenderer.invoke(
+          "get-student-history",
+          studentId,
+        );
+
+        // Create modal
+        const modal = document.createElement("div");
+        modal.className = "history-modal-overlay";
+        modal.innerHTML = `
+      <div class="history-modal">
+        <div class="history-modal-header">
+          <h3>${studentName}'s Reading History</h3>
+          <button class="history-close-btn" id="history-close-btn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+        <div class="history-modal-content">
+          ${
+            history.length === 0
+              ? `<div class="no-history">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+              </svg>
+              <h4>No Reading History</h4>
+              <p>Books will appear here after they are checked in.</p>
+            </div>`
+              : `<div class="history-list">
+              ${history
+                .map(
+                  (book, index) => `
+                <div class="history-item">
+                  <div class="history-item-header">
+                    <span class="history-item-number">#${history.length - index}</span>
+                    <span class="history-item-dates">
+                      <span class="checkout-date">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <path d="M3 3v18h18"></path>
+                          <path d="m19 9-5 5-4-4-3 3"></path>
+                        </svg>
+                        Checked out: ${book.checkoutDate || "Unknown"}
+                      </span>
+                      <span class="checkin-date">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                          <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                        </svg>
+                        Checked in: ${book.checkinDate || "Unknown"}
+                      </span>
+                    </span>
+                  </div>
+                  <div class="history-item-content">
+                    ${
+                      book.cover
+                        ? `<img src="${book.cover}" class="history-book-cover" alt="${book.title}">`
+                        : `<div class="history-book-cover-placeholder">📚</div>`
+                    }
+                    <div class="history-book-info">
+                      <div class="history-book-title">${book.title || "Unknown Book"}</div>
+                      <div class="history-book-author">${book.author || "Unknown Author"}</div>
+                      <div class="history-book-isbn">ISBN: ${book.isbn || "N/A"}</div>
+                    </div>
+                  </div>
+                </div>
+              `,
+                )
+                .join("")}
+            </div>`
+          }
+        </div>
+        <div class="history-modal-footer">
+          <div class="history-stats">
+            <span class="history-stat">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+              </svg>
+              Total Books: ${history.length}
+            </span>
+          </div>
+          <button class="history-close-modal-btn" id="history-close-modal-btn">Close</button>
+        </div>
+      </div>
+    `;
+
+        document.body.appendChild(modal);
+
+        // Add animations
+        setTimeout(() => {
+          modal.classList.add("show");
+        }, 10);
+
+        // Close handlers
+        const closeModal = () => {
+          modal.classList.remove("show");
+          setTimeout(() => {
+            modal.remove();
+            resolve();
+          }, 300);
+        };
+
+        document
+          .getElementById("history-close-btn")
+          .addEventListener("click", closeModal);
+        document
+          .getElementById("history-close-modal-btn")
+          .addEventListener("click", closeModal);
+        modal.addEventListener("click", (e) => {
+          if (e.target === modal) closeModal();
+        });
+
+        // Escape key
+        const handleEscape = (e) => {
+          if (e.key === "Escape") closeModal();
+        };
+        document.addEventListener("keydown", handleEscape);
+
+        // Cleanup
+        modal._cleanup = () => {
+          document.removeEventListener("keydown", handleEscape);
+        };
+      });
+    }
+
+    // Update the dynamic controls to include history button
+    // DYNAMIC CONTROLS FUNCTION - SINGLE VERSION WITH HISTORY BUTTON
+    function updateDynamicControls(selectedCount) {
+      const controlsContainer = document.getElementById("dynamic-controls");
+      if (!controlsContainer) return;
+
+      controlsContainer.innerHTML = "";
+
+      if (selectedCount === 0) {
+        const addBtn = document.createElement("button");
+        addBtn.className = "dynamic-btn primary";
+        addBtn.innerHTML = `
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 5v14M5 12h14"/>
+      </svg>
+      Add Student
+    `;
+        addBtn.addEventListener("click", async () => {
+          const studentName = await showAddStudentModal();
+          if (studentName) {
+            await addStudent(studentName);
+          }
+        });
+        controlsContainer.appendChild(addBtn);
+      } else if (selectedCount === 1) {
+        // Add History Button FIRST
+        const historyBtn = document.createElement("button");
+        historyBtn.className = "dynamic-btn info";
+        historyBtn.innerHTML = `
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"></circle>
+        <polyline points="12 6 12 12 16 14"></polyline>
+      </svg>
+      View Reading History
+    `;
+        historyBtn.addEventListener("click", async () => {
+          const studentId = selectedStudents[0];
+          const allStudents = await ipcRenderer.invoke("get-students");
+          const student = allStudents.find((s) => s.id === studentId);
+          if (student) {
+            await showStudentHistoryModal(studentId, student.name);
+          }
+        });
+        controlsContainer.appendChild(historyBtn);
+
+        const printBtn = document.createElement("button");
+        printBtn.className = "dynamic-btn secondary";
+        printBtn.innerHTML = `
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+        <path d="M6 14h12v8H6z"/>
+      </svg>
+      Print Student ID
+    `;
+        printBtn.addEventListener("click", () => {
+          handlePrint();
+        });
+
+        const removeBtn = document.createElement("button");
+        removeBtn.className = "dynamic-btn danger";
+        removeBtn.innerHTML = `
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+      </svg>
+      Remove Student
+    `;
+        removeBtn.addEventListener("click", () => {
+          handleRemoveStudent();
+        });
+
+        controlsContainer.appendChild(printBtn);
+        controlsContainer.appendChild(removeBtn);
+      } else {
+        const printBtn = document.createElement("button");
+        printBtn.className = "dynamic-btn secondary";
+        printBtn.innerHTML = `
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+        <path d="M6 14h12v8H6z"/>
+      </svg>
+      Print Student IDs (${selectedCount})
+    `;
+        printBtn.addEventListener("click", () => {
+          handlePrint();
+        });
+
+        const removeBtn = document.createElement("button");
+        removeBtn.className = "dynamic-btn danger";
+        removeBtn.innerHTML = `
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+      </svg>
+      Remove Students (${selectedCount})
+    `;
+        removeBtn.addEventListener("click", () => {
+          handleRemoveStudent();
+        });
+
+        controlsContainer.appendChild(printBtn);
+        controlsContainer.appendChild(removeBtn);
+      }
+
+      if (selectedCount > 0) {
+        const addBtn = document.createElement("button");
+        addBtn.className = "dynamic-btn primary";
+        addBtn.innerHTML = `
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 5v14M5 12h14"/>
+      </svg>
+      Add Another Student
+    `;
+        addBtn.addEventListener("click", async () => {
+          const studentName = await showAddStudentModal();
+          if (studentName) {
+            await addStudent(studentName);
+          }
+        });
+        controlsContainer.appendChild(addBtn);
+      }
+    }
 
     function showConfirm(title, message, isDanger = false) {
       return new Promise((resolve) => {
@@ -116,106 +367,6 @@ window.onload = async () => {
 
         setTimeout(() => input.focus(), 100);
       });
-    }
-
-    // DYNAMIC CONTROLS FUNCTION
-    function updateDynamicControls(selectedCount) {
-      const controlsContainer = document.getElementById("dynamic-controls");
-      if (!controlsContainer) return;
-
-      controlsContainer.innerHTML = "";
-
-      if (selectedCount === 0) {
-        const addBtn = document.createElement("button");
-        addBtn.className = "dynamic-btn primary";
-        addBtn.innerHTML = `
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M12 5v14M5 12h14"/>
-        </svg>
-        Add Student
-      `;
-        addBtn.addEventListener("click", async () => {
-          const studentName = await showAddStudentModal();
-          if (studentName) {
-            await addStudent(studentName);
-          }
-        });
-        controlsContainer.appendChild(addBtn);
-      } else if (selectedCount === 1) {
-        const printBtn = document.createElement("button");
-        printBtn.className = "dynamic-btn secondary";
-        printBtn.innerHTML = `
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
-          <path d="M6 14h12v8H6z"/>
-        </svg>
-        Print Student ID
-      `;
-        printBtn.addEventListener("click", () => {
-          handlePrint();
-        });
-
-        const removeBtn = document.createElement("button");
-        removeBtn.className = "dynamic-btn danger";
-        removeBtn.innerHTML = `
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-        </svg>
-        Remove Student
-      `;
-        removeBtn.addEventListener("click", () => {
-          handleRemoveStudent();
-        });
-
-        controlsContainer.appendChild(printBtn);
-        controlsContainer.appendChild(removeBtn);
-      } else {
-        const printBtn = document.createElement("button");
-        printBtn.className = "dynamic-btn secondary";
-        printBtn.innerHTML = `
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
-          <path d="M6 14h12v8H6z"/>
-        </svg>
-        Print Student IDs (${selectedCount})
-      `;
-        printBtn.addEventListener("click", () => {
-          handlePrint();
-        });
-
-        const removeBtn = document.createElement("button");
-        removeBtn.className = "dynamic-btn danger";
-        removeBtn.innerHTML = `
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-        </svg>
-        Remove Students (${selectedCount})
-      `;
-        removeBtn.addEventListener("click", () => {
-          handleRemoveStudent();
-        });
-
-        controlsContainer.appendChild(printBtn);
-        controlsContainer.appendChild(removeBtn);
-      }
-
-      if (selectedCount > 0) {
-        const addBtn = document.createElement("button");
-        addBtn.className = "dynamic-btn primary";
-        addBtn.innerHTML = `
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M12 5v14M5 12h14"/>
-        </svg>
-        Add Another Student
-      `;
-        addBtn.addEventListener("click", async () => {
-          const studentName = await showAddStudentModal();
-          if (studentName) {
-            await addStudent(studentName);
-          }
-        });
-        controlsContainer.appendChild(addBtn);
-      }
     }
 
     // ADD STUDENT HELPER FUNCTION
@@ -577,6 +728,7 @@ window.onload = async () => {
 
       // Update dynamic controls
       updateDynamicControls(selected.length);
+      setTimeout(focusBarcodeInput, 50);
     }
 
     const students = await ipcRenderer.invoke("get-students");
@@ -598,31 +750,77 @@ window.onload = async () => {
     barcodeInput.style.opacity = "0";
     barcodeInput.style.pointerEvents = "none";
     barcodeInput.id = "barcode-scanner-input";
+    barcodeInput.autocomplete = "off";
+    barcodeInput.autocorrect = "off";
+    barcodeInput.autocapitalize = "off";
+    barcodeInput.spellcheck = false;
     document.body.appendChild(barcodeInput);
+
+    let scanTimeout;
+    let isProcessingScan = false;
+    let lastScanTime = 0;
 
     function focusBarcodeInput() {
       if (barcodeInput) {
         barcodeInput.value = "";
-        barcodeInput.focus();
+        setTimeout(() => {
+          barcodeInput.focus();
+        }, 50);
       }
     }
-    setTimeout(focusBarcodeInput, 500);
 
-    let scanTimeout;
+    // Set up a global focus handler
+    document.addEventListener("click", (e) => {
+      // Only refocus if clicking on non-input elements
+      if (
+        e.target.tagName !== "INPUT" &&
+        e.target.tagName !== "TEXTAREA" &&
+        e.target.tagName !== "BUTTON"
+      ) {
+        setTimeout(focusBarcodeInput, 100);
+      }
+    });
+
+    // Also focus when window gains focus
+    window.addEventListener("focus", () => {
+      setTimeout(focusBarcodeInput, 100);
+    });
+
+    setTimeout(focusBarcodeInput, 500);
 
     barcodeInput.addEventListener("input", (e) => {
       const scanned = barcodeInput.value.trim();
+
+      // Prevent multiple scans in quick succession
+      const now = Date.now();
+      if (now - lastScanTime < 500) {
+        // 500ms debounce
+        barcodeInput.value = "";
+        return;
+      }
+
+      // Prevent processing if already processing
+      if (isProcessingScan || !scanned) {
+        return;
+      }
+
       clearTimeout(scanTimeout);
 
-      if (scanned) {
-        scanTimeout = setTimeout(async () => {
+      scanTimeout = setTimeout(async () => {
+        isProcessingScan = true;
+        lastScanTime = Date.now();
+
+        try {
           const allStudents = await ipcRenderer.invoke("get-students");
           const scannedStudent = allStudents.find((s) => s.id === scanned);
 
+          // If scanning a student ID
           if (scannedStudent) {
             document
               .querySelectorAll(".student-card.selected")
-              .forEach((el) => el.classList.remove("selected"));
+              .forEach((el) => {
+                el.classList.remove("selected");
+              });
             const card = document.querySelector(
               `.student-card[data-student-id='${scanned}']`,
             );
@@ -631,26 +829,37 @@ window.onload = async () => {
               selectedStudents = [scanned];
               renderSelectedBooks();
               card.scrollIntoView({ behavior: "smooth", block: "nearest" });
+              showToast(`✓ Selected: ${scannedStudent.name}`, "#10b981");
             }
             barcodeInput.value = "";
             setTimeout(focusBarcodeInput, 100);
+            isProcessingScan = false;
             return;
           }
 
+          // If no student selected
           if (selectedStudents.length !== 1) {
             showToast("Select a student first", "#ef4444");
             barcodeInput.value = "";
             setTimeout(focusBarcodeInput, 100);
+            isProcessingScan = false;
             return;
           }
 
           const studentId = selectedStudents[0];
           const student = allStudents.find((s) => s.id === studentId);
-          if (!student) return;
+          if (!student) {
+            barcodeInput.value = "";
+            setTimeout(focusBarcodeInput, 100);
+            isProcessingScan = false;
+            return;
+          }
 
+          // Check if book is already checked out
           const existingBook = student.books?.find((b) => b.isbn === scanned);
 
           if (existingBook) {
+            // Book check-in
             const confirmCheckin = await showConfirm(
               "Check In Book",
               `Check in: ${existingBook.title || scanned}?\nStudent: ${student.name}`,
@@ -664,6 +873,7 @@ window.onload = async () => {
                 "update-student-books",
                 studentId,
                 updatedBooks,
+                "checkin",
               );
               showToast(
                 `✓ Checked in: ${existingBook.title || scanned}`,
@@ -671,6 +881,7 @@ window.onload = async () => {
               );
             }
           } else {
+            // Book check-out
             showToast("Fetching book info...", "#3b82f6");
             let title = "Unknown Book";
             let author = "Unknown Author";
@@ -679,19 +890,23 @@ window.onload = async () => {
             try {
               const response = await fetch(
                 `https://openlibrary.org/api/books?bibkeys=ISBN:${scanned}&format=json&jscmd=data`,
+                { timeout: 5000 }, // 5 second timeout
               );
-              const data = await response.json();
-              const bookKey = `ISBN:${scanned}`;
+              if (response.ok) {
+                const data = await response.json();
+                const bookKey = `ISBN:${scanned}`;
 
-              if (data[bookKey]) {
-                title = data[bookKey].title || title;
-                author = data[bookKey].authors
-                  ? data[bookKey].authors[0].name
-                  : author;
-                cover = data[bookKey].cover ? data[bookKey].cover.medium : "";
+                if (data[bookKey]) {
+                  title = data[bookKey].title || title;
+                  author = data[bookKey].authors
+                    ? data[bookKey].authors[0].name
+                    : author;
+                  cover = data[bookKey].cover ? data[bookKey].cover.medium : "";
+                }
               }
             } catch (err) {
               console.error("API Error:", err);
+              // Continue with default values
             }
 
             const newBook = {
@@ -711,20 +926,41 @@ window.onload = async () => {
             showToast(`✓ Checked out: ${title}`, "#0d9488");
           }
 
+          // Refresh the student list
           const updatedStudents = await ipcRenderer.invoke("get-students");
           studentsContainer.innerHTML = "";
           const sortedStudents = sortStudents(updatedStudents, currentSort);
           sortedStudents.forEach(addStudentToList);
 
+          // Re-select the current student
           const activeCard = document.querySelector(
             `.student-card[data-student-id='${studentId}']`,
           );
-          if (activeCard) activeCard.classList.add("selected");
+          if (activeCard) {
+            activeCard.classList.add("selected");
+            // Ensure the student stays selected
+            selectedStudents = [studentId];
+          }
 
           renderSelectedBooks();
+        } catch (error) {
+          console.error("Scan error:", error);
+          showToast("Error processing scan. Please try again.", "#ef4444");
+        } finally {
           barcodeInput.value = "";
-          setTimeout(focusBarcodeInput, 100);
-        }, 200);
+          setTimeout(() => {
+            focusBarcodeInput();
+            isProcessingScan = false;
+          }, 100);
+        }
+      }, 200); // Increased timeout to 200ms for better reliability
+    });
+    barcodeInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        // Trigger the input event manually
+        const event = new Event("input", { bubbles: true });
+        barcodeInput.dispatchEvent(event);
       }
     });
 
@@ -789,4 +1025,10 @@ window.onload = async () => {
       `;
     }
   }
+  document.body.classList.add("barcode-scanner-ready");
+
+  // Focus barcode input whenever student selection changes
+  window.addEventListener("studentSelected", () => {
+    setTimeout(focusBarcodeInput, 100);
+  });
 };
