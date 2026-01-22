@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Easy Student Checkout System (ESCS)</title>
+    <link rel="icon" type="image/x-icon" href="project_icon.ico" />
+    <link rel="stylesheet" href="css/main.css" />
+    <link rel="stylesheet" href="css/print.css" media="print" />
+  </head>
+
+  <body>
+    <!-- Sidebar -->
+    <aside
+      class="sidebar"
+      id="main-sidebar"
+      role="complementary"
+      aria-label="Student list sidebar"
+    >
+      <div class="select-all-row">
+        <label class="select-all-label">
+          <input
+            type="checkbox"
+            id="select-all-checkbox"
+            aria-label="Select all students"
+          />
+          <span>Select All Students</span>
+        </label>
+        <div class="sort-dropdown">
+          <button
+            class="sort-button"
+            id="sort-button"
+            aria-label="Sort options"
+            aria-haspopup="true"
+            aria-expanded="false"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              aria-hidden="true"
+            >
+              <line x1="4" y1="6" x2="16" y2="6"></line>
+              <line x1="4" y1="12" x2="13" y2="12"></line>
+              <line x1="4" y1="18" x2="10" y2="18"></line>
+            </svg>
+          </button>
+          <div
+            class="sort-menu"
+            id="sort-menu"
+            role="menu"
+            aria-labelledby="sort-button"
+          >
+            <!-- Sort options remain the same -->
+          </div>
+        </div>
+      </div>
+
+      <div
+        class="student-list"
+        id="students"
+        role="list"
+        aria-label="Student list"
+      ></div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content" role="main">
+      <!-- Top Bar -->
+      <header class="top-bar" role="banner">
+        <div class="app-header">
+          <img
+            src="assets/project_icon.png"
+            alt="ESCS Application Icon"
+            class="app-icon"
+          />
+          <h1 class="app-name">Easy Student Checkout System</h1>
+        </div>
+
+        <div class="center-content">
+          <div
+            class="state-indicator"
+            id="state-indicator"
+            aria-live="polite"
+          ></div>
+          <div class="barcode-input-container">
+            <span class="visually-hidden" id="barcode-instructions">
+              Press Ctrl+B to focus barcode scanner input
+            </span>
+          </div>
+        </div>
+
+        <div class="top-right">
+          <button
+            id="logout-btn"
+            class="logout-button"
+            title="Logout"
+            aria-label="Logout from application"
+          >
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              aria-hidden="true"
+            >
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+              <polyline points="16 17 21 12 16 7"></polyline>
+              <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <!-- Welcome Message -->
+      <section
+        class="welcome-container"
+        id="welcome-container"
+        aria-label="Welcome message"
+      >
+        <!-- Content injected by JavaScript -->
+      </section>
+
+      <!-- Books Area -->
+      <section class="books-area" aria-label="Books checkout area">
+        <h2 class="books-header" id="books-header"></h2>
+        <div
+          class="books-grid"
+          id="selected-books-list"
+          role="list"
+          aria-label="Selected books"
+        ></div>
+      </section>
+
+      <!-- Dynamic Controls -->
+      <footer
+        class="dynamic-controls"
+        id="dynamic-controls"
+        role="toolbar"
+        aria-label="Action buttons"
+      >
+        <!-- Buttons injected by JavaScript -->
+      </footer>
+    </main>
+
+    <!-- Confirm Modal -->
+    <div
+      id="confirm-modal"
+      class="modal-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="confirm-title"
+      aria-describedby="confirm-message"
+    >
+      <div class="modal-content">
+        <h3 id="confirm-title">Confirm Action</h3>
+        <p id="confirm-message">Are you sure?</p>
+        <div class="modal-buttons">
+          <button id="confirm-cancel" class="modal-btn modal-btn-cancel">
+            Cancel
+          </button>
+          <button id="confirm-ok" class="modal-btn modal-btn-confirm">
+            Confirm
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add Student Modal -->
+    <div
+      id="add-student-modal"
+      class="modal-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="add-student-title"
+    >
+      <div class="modal-content">
+        <h3 id="add-student-title">Add New Student</h3>
+        <p>Enter the student's name:</p>
+        <input
+          type="text"
+          id="add-student-name-input"
+          placeholder="Student Name"
+          class="modal-input"
+          aria-label="Student name"
+          autocomplete="off"
+        />
+        <div class="modal-buttons">
+          <button id="add-student-cancel" class="modal-btn modal-btn-cancel">
+            Cancel
+          </button>
+          <button id="add-student-confirm" class="modal-btn modal-btn-confirm">
+            Add Student
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hidden print area -->
+    <div id="print-area" class="visually-hidden" aria-hidden="true"></div>
+
+    <!-- External Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+
+    <!-- Application Scripts -->
+    <script src="js/renderer.js" type="module"></script>
+  </body>
+</html>

@@ -1,0 +1,19 @@
+/* Base styles */
+@import "base/_variables.css";
+@import "base/_reset.css";
+@import "base/_utilities.css";
+
+/* Component styles */
+@import "components/_buttons.css";
+@import "components/_modals.css";
+@import "components/_cards.css";
+@import "components/_forms.css";
+
+/* Layout styles */
+@import "layout/_sidebar.css";
+@import "layout/_header.css";
+@import "layout/_grid.css";
+
+/* Page styles */
+@import "pages/_login.css";
+@import "pages/_main.css";

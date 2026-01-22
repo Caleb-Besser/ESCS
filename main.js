@@ -1,369 +1,524 @@
-const { app, BrowserWindow, ipcMain } = require("electron");
+console.log("Starting ESCS application...");
+const { app, BrowserWindow, ipcMain, session } = require("electron");
 const bcrypt = require("bcrypt");
 const path = require("path");
-const fs = require("fs"); // Add this at the top
+const fs = require("fs");
 
-let store;
-let mainWindow;
-
-// FIXED: Initialize store with proper user data path
-async function initializeStore() {
-  const Store = (await import("electron-store")).default;
-
-  // Use app.getPath('userData') which always works in packaged apps
-  const userDataPath = app.getPath("userData");
-  const dataDir = path.join(userDataPath, "escs-data");
-
-  // Ensure directory exists
-  if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
+class Application {
+  constructor() {
+    this.mainWindow = null;
+    this.store = null;
+    this.isDev = process.env.NODE_ENV === "development" || !app.isPackaged;
   }
 
-  store = new Store({
-    cwd: dataDir, // Store data in proper user data directory
-    name: "user_data",
-    clearInvalidConfig: true,
-    serialize: (value) => JSON.stringify(value, null, 2),
-    deserialize: JSON.parse,
-  });
-
-  console.log("Store initialized at:", dataDir);
-}
-
-// All your IPC handlers remain the same, just add better error handling
-
-// In main.js, update the update-student-books handler
-ipcMain.handle(
-  "update-student-books",
-  (event, studentId, books, action = "update") => {
+  async initialize() {
     try {
-      const currentUser = store.get("currentUser");
+      await this.initializeStore();
+      this.setupAppLifecycle();
+      this.setupIPC();
+      this.setupSecurity();
+    } catch (error) {
+      console.error("Failed to initialize application:", error);
+      process.exit(1);
+    }
+  }
+
+  async initializeStore() {
+    const userDataPath = app.getPath("userData");
+    const dataDir = path.join(userDataPath, "escs-data");
+
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+
+    // Dynamic import for electron-store (ES module)
+    const { default: Store } = await import("electron-store");
+
+    this.store = new Store({
+      cwd: dataDir,
+      name: "config",
+      clearInvalidConfig: true,
+      watch: true,
+      defaults: {
+        authUsers: [],
+        sessions: {},
+      },
+    });
+
+    console.log(`Data store initialized at: ${dataDir}`);
+  }
+
+  setupSecurity() {
+    // Content Security Policy
+    session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+      callback({
+        responseHeaders: {
+          ...details.responseHeaders,
+          "Content-Security-Policy": [
+            "default-src 'self'; " +
+              "script-src 'self' https://cdn.jsdelivr.net; " +
+              "style-src 'self' 'unsafe-inline'; " +
+              "img-src 'self' data: https:; " +
+              "connect-src 'self' https://openlibrary.org;",
+          ],
+        },
+      });
+    });
+
+    // Disable Node.js integration in renderer for security
+    // Note: Your current code has nodeIntegration: true, which is insecure
+    // Consider migrating to contextIsolation: true and preload scripts
+  }
+
+  setupAppLifecycle() {
+    console.log("Setting up app lifecycle...");
+    if (app.isReady()) {
+      console.log("App is already ready, creating main window immediately");
+      this.createMainWindow();
+    } else {
+      app.on("ready", () => {
+        console.log("App ready event fired");
+        this.createMainWindow();
+      });
+    }
+    app.on("window-all-closed", () => this.handleWindowAllClosed());
+    app.on("activate", () => this.handleActivate());
+    app.on("before-quit", () => this.handleBeforeQuit());
+  }
+
+  setupIPC() {
+    // Authentication handlers
+    ipcMain.handle("auth:register", this.handleRegister.bind(this));
+    ipcMain.handle("auth:login", this.handleLogin.bind(this));
+    ipcMain.handle("auth:logout", this.handleLogout.bind(this));
+    ipcMain.handle("auth:current-user", this.handleGetCurrentUser.bind(this));
+
+    // Student handlers
+    ipcMain.handle("students:get-all", this.handleGetStudents.bind(this));
+    ipcMain.handle("students:add", this.handleAddStudent.bind(this));
+    ipcMain.handle("students:remove", this.handleRemoveStudents.bind(this));
+    ipcMain.handle(
+      "students:update-books",
+      this.handleUpdateStudentBooks.bind(this),
+    );
+    ipcMain.handle(
+      "students:get-history",
+      this.handleGetStudentHistory.bind(this),
+    );
+
+    // System handlers
+    ipcMain.on("system:print-preview", this.handlePrintPreview.bind(this));
+    ipcMain.on("system:reload-to-login", this.handleReloadToLogin.bind(this));
+    ipcMain.on("system:get-version", (event) => {
+      event.returnValue = app.getVersion();
+    });
+  }
+
+  async handleRegister(event, email, password, rememberMe) {
+    try {
+      const users = this.store.get("authUsers", []);
+
+      if (users.some((u) => u.email === email)) {
+        return { success: false, error: "Email already registered" };
+      }
+
+      const hashedPassword = await bcrypt.hash(password, 12);
+      const userId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+      const newUser = {
+        id: userId,
+        email,
+        password: hashedPassword,
+        createdAt: new Date().toISOString(),
+        lastLogin: null,
+      };
+
+      users.push(newUser);
+      this.store.set("authUsers", users);
+
+      // Initialize user data
+      this.store.set(`users.${userId}.students`, []);
+      this.store.set(`users.${userId}.settings`, {
+        theme: "light",
+        notifications: true,
+      });
+
+      return this.createSession(userId, email, rememberMe);
+    } catch (error) {
+      console.error("Registration error:", error);
+      return {
+        success: false,
+        error: "Registration failed. Please try again.",
+      };
+    }
+  }
+
+  async handleLogin(event, email, password, rememberMe) {
+    try {
+      const users = this.store.get("authUsers", []);
+      const user = users.find((u) => u.email === email);
+
+      if (!user) {
+        return { success: false, error: "Invalid email or password" };
+      }
+
+      const isValid = await bcrypt.compare(password, user.password);
+      if (!isValid) {
+        return { success: false, error: "Invalid email or password" };
+      }
+
+      // Update last login
+      user.lastLogin = new Date().toISOString();
+      this.store.set("authUsers", users);
+
+      return this.createSession(user.id, user.email, rememberMe);
+    } catch (error) {
+      console.error("Login error:", error);
+      return { success: false, error: "Login failed. Please try again." };
+    }
+  }
+
+  createSession(userId, email, rememberMe) {
+    const sessionExpiry = rememberMe
+      ? Date.now() + 15 * 24 * 60 * 60 * 1000 // 15 days
+      : Date.now() + 8 * 60 * 60 * 1000; // 8 hours
+
+    const session = {
+      id: userId,
+      email,
+      expiry: sessionExpiry,
+      createdAt: Date.now(),
+    };
+
+    this.store.set("currentUser", session);
+
+    return {
+      success: true,
+      user: { id: userId, email },
+      expiresAt: sessionExpiry,
+    };
+  }
+
+  handleLogout() {
+    try {
+      const currentUser = this.store.get("currentUser");
+      if (currentUser) {
+        // Add to audit log
+        const auditLog = this.store.get("auditLog", []);
+        auditLog.push({
+          userId: currentUser.id,
+          action: "logout",
+          timestamp: new Date().toISOString(),
+        });
+        this.store.set("auditLog", auditLog);
+      }
+
+      this.store.delete("currentUser");
+      return { success: true };
+    } catch (error) {
+      console.error("Logout error:", error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  handleGetCurrentUser() {
+    try {
+      const currentUser = this.store.get("currentUser");
+      if (!currentUser) return null;
+
+      if (currentUser.expiry && Date.now() > currentUser.expiry) {
+        this.store.delete("currentUser");
+        return null;
+      }
+
+      return {
+        id: currentUser.id,
+        email: currentUser.email,
+        expiresAt: currentUser.expiry,
+      };
+    } catch (error) {
+      console.error("Error getting current user:", error);
+      return null;
+    }
+  }
+
+  handleGetStudents() {
+    try {
+      const currentUser = this.store.get("currentUser");
       if (!currentUser) return [];
 
-      const userStudents = store.get(`users.${currentUser.id}.students`, []);
-      const studentIndex = userStudents.findIndex((s) => s.id === studentId);
+      return this.store.get(`users.${currentUser.id}.students`, []);
+    } catch (error) {
+      console.error("Error getting students:", error);
+      return [];
+    }
+  }
 
-      if (studentIndex === -1) return userStudents;
+  handleAddStudent(event, studentName) {
+    try {
+      const currentUser = this.store.get("currentUser");
+      if (!currentUser) return [];
 
-      // If checking in a book (removing from current), save to history
-      const oldStudent = userStudents[studentIndex];
-      if (
-        action === "checkin" &&
-        oldStudent.books &&
-        oldStudent.books.length > 0
-      ) {
-        // Get history array or initialize it
-        const history = store.get(
+      const students = this.store.get(`users.${currentUser.id}.students`, []);
+      const studentId = `stu_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+
+      const newStudent = {
+        id: studentId,
+        name: studentName.trim(),
+        books: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      students.push(newStudent);
+      this.store.set(`users.${currentUser.id}.students`, students);
+
+      // Audit log
+      const auditLog = this.store.get("auditLog", []);
+      auditLog.push({
+        userId: currentUser.id,
+        action: "add_student",
+        studentId,
+        timestamp: new Date().toISOString(),
+      });
+      this.store.set("auditLog", auditLog);
+
+      return students;
+    } catch (error) {
+      console.error("Error adding student:", error);
+      throw new Error("Failed to add student");
+    }
+  }
+
+  handleRemoveStudents(event, idsToRemove) {
+    try {
+      const currentUser = this.store.get("currentUser");
+      if (!currentUser) return [];
+
+      let students = this.store.get(`users.${currentUser.id}.students`, []);
+      const removedCount = students.length;
+
+      students = students.filter(
+        (student) => !idsToRemove.includes(student.id),
+      );
+      this.store.set(`users.${currentUser.id}.students`, students);
+
+      // Audit log
+      const auditLog = this.store.get("auditLog", []);
+      auditLog.push({
+        userId: currentUser.id,
+        action: "remove_students",
+        removedCount: removedCount - students.length,
+        timestamp: new Date().toISOString(),
+      });
+      this.store.set("auditLog", auditLog);
+
+      return students;
+    } catch (error) {
+      console.error("Error removing students:", error);
+      throw new Error("Failed to remove students");
+    }
+  }
+
+  handleUpdateStudentBooks(event, studentId, books, action = "update") {
+    try {
+      const currentUser = this.store.get("currentUser");
+      if (!currentUser) return [];
+
+      const students = this.store.get(`users.${currentUser.id}.students`, []);
+      const studentIndex = students.findIndex((s) => s.id === studentId);
+
+      if (studentIndex === -1) return students;
+
+      const oldStudent = students[studentIndex];
+
+      if (action === "checkin" && oldStudent.books?.length > 0) {
+        const history = this.store.get(
           `users.${currentUser.id}.history.${studentId}`,
           [],
         );
 
-        // Find which books were checked in (books that are no longer in the new list)
         const removedBooks = oldStudent.books.filter(
           (oldBook) => !books.find((newBook) => newBook.isbn === oldBook.isbn),
         );
 
-        // Add checkout date and checkin date to removed books
-        const now = new Date().toLocaleDateString();
+        const now = new Date().toISOString();
         removedBooks.forEach((book) => {
           book.checkinDate = now;
-          if (!book.checkoutDate) {
-            book.checkoutDate = now; // If for some reason it's missing
-          }
+          if (!book.checkoutDate) book.checkoutDate = now;
         });
 
-        // Add to history
-        const updatedHistory = [...history, ...removedBooks];
-        store.set(
-          `users.${currentUser.id}.history.${studentId}`,
-          updatedHistory,
-        );
+        this.store.set(`users.${currentUser.id}.history.${studentId}`, [
+          ...history,
+          ...removedBooks,
+        ]);
       }
 
-      // Update current books
-      userStudents[studentIndex].books = books;
-      store.set(`users.${currentUser.id}.students`, userStudents);
+      students[studentIndex].books = books;
+      students[studentIndex].updatedAt = new Date().toISOString();
+      this.store.set(`users.${currentUser.id}.students`, students);
 
-      return userStudents;
+      return students;
     } catch (error) {
       console.error("Error updating student books:", error);
       throw error;
     }
-  },
-);
-
-// Add new handler to get student history
-ipcMain.handle("get-student-history", (event, studentId) => {
-  try {
-    const currentUser = store.get("currentUser");
-    if (!currentUser) return [];
-
-    return store.get(`users.${currentUser.id}.history.${studentId}`, []);
-  } catch (error) {
-    console.error("Error getting student history:", error);
-    return [];
   }
-});
 
-ipcMain.on("open-print-preview", (event, html) => {
-  const previewWin = new BrowserWindow({
-    width: 1000,
-    height: 800,
-    show: true,
-    autoHideMenuBar: true,
-    webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true,
-    },
-  });
+  handleGetStudentHistory(event, studentId) {
+    try {
+      const currentUser = this.store.get("currentUser");
+      if (!currentUser) return [];
 
-  previewWin.loadURL(
-    "data:text/html;charset=utf-8," + encodeURIComponent(html),
-  );
-
-  previewWin.on("closed", () => {
-    console.log("Print preview window closed");
-  });
-});
-
-// Authentication handlers with error handling
-ipcMain.handle("register", async (event, email, password, rememberMe) => {
-  try {
-    const users = store.get("authUsers", []);
-
-    // Check if user already exists
-    if (users.find((u) => u.email === email)) {
-      return { success: false, error: "Email already registered" };
+      return this.store.get(`users.${currentUser.id}.history.${studentId}`, []);
+    } catch (error) {
+      console.error("Error getting student history:", error);
+      return [];
     }
+  }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const userId = Date.now().toString();
-
-    // Create new user
-    users.push({
-      id: userId,
-      email,
-      password: hashedPassword,
-      createdAt: new Date().toISOString(),
+  handlePrintPreview(event, html) {
+    const previewWindow = new BrowserWindow({
+      width: 1000,
+      height: 800,
+      title: "Print Preview - ESCS",
+      show: true,
+      autoHideMenuBar: true,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        sandbox: true,
+      },
     });
 
-    store.set("authUsers", users);
+    previewWindow.loadURL(
+      `data:text/html;charset=utf-8,${encodeURIComponent(html)}`,
+    );
 
-    // Initialize empty student list for this user
-    store.set(`users.${userId}.students`, []);
-
-    // Set current user session
-    const sessionExpiry = rememberMe
-      ? Date.now() + 15 * 24 * 60 * 60 * 1000 // 15 days
-      : null;
-
-    store.set("currentUser", {
-      id: userId,
-      email,
-      expiry: sessionExpiry,
+    previewWindow.webContents.on("did-finish-load", () => {
+      previewWindow.webContents
+        .printToPDF({})
+        .then((data) => {
+          const pdfPath = path.join(
+            app.getPath("downloads"),
+            `escs-print-${Date.now()}.pdf`,
+          );
+          fs.writeFile(pdfPath, data, (err) => {
+            if (err) console.error("Failed to save PDF:", err);
+          });
+        })
+        .catch((err) => {
+          console.error("Failed to generate PDF:", err);
+        });
     });
 
-    return { success: true };
-  } catch (error) {
-    console.error("Registration error:", error);
-    return { success: false, error: error.message };
-  }
-});
-
-ipcMain.handle("login", async (event, email, password, rememberMe) => {
-  try {
-    const users = store.get("authUsers", []);
-    const user = users.find((u) => u.email === email);
-
-    if (!user) {
-      return { success: false, error: "Invalid email or password" };
-    }
-
-    // Verify password
-    const isValid = await bcrypt.compare(password, user.password);
-
-    if (!isValid) {
-      return { success: false, error: "Invalid email or password" };
-    }
-
-    // Set current user session
-    const sessionExpiry = rememberMe
-      ? Date.now() + 15 * 24 * 60 * 60 * 1000 // 15 days
-      : null;
-
-    store.set("currentUser", {
-      id: user.id,
-      email: user.email,
-      expiry: sessionExpiry,
+    previewWindow.on("closed", () => {
+      console.log("Print preview window closed");
     });
-
-    return { success: true };
-  } catch (error) {
-    console.error("Login error:", error);
-    return { success: false, error: error.message };
   }
-});
 
-ipcMain.handle("logout", () => {
-  try {
-    store.delete("currentUser");
-    return { success: true };
-  } catch (error) {
-    console.error("Logout error:", error);
-    return { success: false, error: error.message };
+  handleReloadToLogin() {
+    if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+      this.mainWindow.loadFile("pages/login.html").then(() => {
+        setTimeout(() => {
+          this.mainWindow.focus();
+          this.mainWindow.webContents.focus();
+        }, 200);
+      });
+    }
   }
-});
 
-ipcMain.on("reload-to-login", () => {
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.loadFile("login.html").then(() => {
-      // Force focus after a short delay
+  handleWindowAllClosed() {
+    if (process.platform !== "darwin") {
+      app.quit();
+    }
+  }
+
+  handleActivate() {
+    if (BrowserWindow.getAllWindows().length === 0) {
+      this.createMainWindow();
+    }
+  }
+
+  handleBeforeQuit() {
+    // Cleanup tasks before quit
+    console.log("Application shutting down...");
+  }
+
+  async createMainWindow() {
+    try {
+      console.log("Creating main window...");
+      app.setAppUserModelId("com.escs.checkout");
+
+      this.mainWindow = new BrowserWindow({
+        width: 1400,
+        height: 900,
+        minWidth: 800,
+        minHeight: 600,
+        title: "Easy Student Checkout System (ESCS)",
+        icon: path.join(__dirname, "assets", "project_icon.ico"),
+        autoHideMenuBar: true,
+        show: true, // Show immediately to debug
+        webPreferences: {
+          // WARNING: nodeIntegration is insecure. Consider migrating to preload scripts
+          nodeIntegration: true,
+          contextIsolation: false,
+          enableRemoteModule: false,
+          spellcheck: false,
+        },
+      });
+
+      console.log("Window created, loading initial page...");
+      // Load and show
+      await this.loadInitialPage();
+      console.log("Initial page loaded, maximizing...");
+
+      this.mainWindow.maximize();
+      console.log("Maximized, showing window...");
+      this.mainWindow.show();
+      console.log("Window shown.");
+
+      if (this.isDev) {
+        this.mainWindow.webContents.openDevTools({ mode: "detach" });
+      }
+
+      this.setupWindowEvents();
+    } catch (error) {
+      console.error("Failed to create main window:", error);
+    }
+  }
+
+  async loadInitialPage() {
+    const currentUser = this.store.get("currentUser");
+    const page =
+      currentUser && (!currentUser.expiry || Date.now() < currentUser.expiry)
+        ? "pages/index.html"
+        : "pages/login.html";
+
+    await this.mainWindow.loadFile(page);
+  }
+
+  setupWindowEvents() {
+    this.mainWindow.webContents.on("did-finish-load", () => {
       setTimeout(() => {
-        mainWindow.focus();
-        mainWindow.webContents.focus();
-      }, 200);
-    });
-  }
-});
-
-ipcMain.handle("get-current-user", () => {
-  try {
-    const currentUser = store.get("currentUser", null);
-
-    if (!currentUser) return null;
-
-    // Check if session has expired
-    if (currentUser.expiry && Date.now() > currentUser.expiry) {
-      store.delete("currentUser");
-      return null;
-    }
-
-    return currentUser;
-  } catch (error) {
-    console.error("Error getting current user:", error);
-    return null;
-  }
-});
-
-// Student management handlers (now per-user)
-ipcMain.handle("get-students", () => {
-  try {
-    const currentUser = store.get("currentUser");
-    if (!currentUser) return [];
-
-    return store.get(`users.${currentUser.id}.students`, []);
-  } catch (error) {
-    console.error("Error getting students:", error);
-    return [];
-  }
-});
-
-ipcMain.handle("add-student", (event, studentName) => {
-  try {
-    const currentUser = store.get("currentUser");
-    if (!currentUser) return [];
-
-    let students = store.get(`users.${currentUser.id}.students`, []);
-    const randomId = Math.floor(10000000 + Math.random() * 90000000).toString();
-
-    students.push({
-      name: studentName,
-      id: randomId,
-      books: [],
+        this.mainWindow.focus();
+        this.mainWindow.webContents.focus();
+      }, 100);
     });
 
-    store.set(`users.${currentUser.id}.students`, students);
-    return students;
-  } catch (error) {
-    console.error("Error adding student:", error);
-    throw error;
+    this.mainWindow.on("closed", () => {
+      this.mainWindow = null;
+    });
+
+    // Prevent navigation away from the app
+    this.mainWindow.webContents.on("will-navigate", (event, url) => {
+      if (!url.startsWith("file://")) {
+        event.preventDefault();
+      }
+    });
   }
-});
-
-ipcMain.handle("remove-students", (event, idsToRemove) => {
-  try {
-    const currentUser = store.get("currentUser");
-    if (!currentUser) return [];
-
-    let students = store.get(`users.${currentUser.id}.students`, []);
-    students = students.filter((student) => !idsToRemove.includes(student.id));
-
-    store.set(`users.${currentUser.id}.students`, students);
-    return students;
-  } catch (error) {
-    console.error("Error removing students:", error);
-    throw error;
-  }
-});
-
-async function createWindow() {
-  // Initialize store before creating window
-  await initializeStore();
-
-  // MIGRATION: Move old students data if it exists
-  const oldStudents = store.get("students");
-  if (oldStudents && oldStudents.length > 0) {
-    console.log("Found old student data, cleaning up...");
-    // Delete the old data - users will start fresh
-    store.delete("students");
-    console.log("Old student data removed. Users will start with empty lists.");
-  }
-
-  app.setAppUserModelId("com.escs.checkout");
-
-  mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
-    title: "Easy Student Checkout System (ESCS)",
-    icon: "./project_icon.ico",
-    autoHideMenuBar: true,
-    webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false,
-    },
-  });
-
-  // Maximize the window on startup
-  mainWindow.maximize();
-
-  // Handle window focus when page loads
-  mainWindow.webContents.on("did-finish-load", () => {
-    setTimeout(() => {
-      mainWindow.focus();
-      mainWindow.webContents.focus();
-    }, 100);
-  });
-
-  // Check if user is logged in and session is valid
-  const currentUser = store.get("currentUser");
-
-  if (currentUser) {
-    // Check if session expired
-    if (currentUser.expiry && Date.now() > currentUser.expiry) {
-      store.delete("currentUser");
-      mainWindow.loadFile("login.html");
-    } else {
-      mainWindow.loadFile("index.html");
-    }
-  } else {
-    mainWindow.loadFile("login.html");
-  }
-
-  // Optional: Open dev tools for debugging
-  // mainWindow.webContents.openDevTools();
 }
 
-app.whenReady().then(createWindow);
-
-app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") {
-    app.quit();
-  }
-});
-
-app.on("activate", () => {
-  if (BrowserWindow.getAllWindows().length === 0) {
-    createWindow();
-  }
-});
+// Application entry point
+const application = new Application();
+application.initialize().catch(console.error);
