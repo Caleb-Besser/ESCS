@@ -6,6 +6,15 @@
     <title>Easy Student Checkout System (ESCS)</title>
     <link rel="stylesheet" href="style.css" />
     <link rel="stylesheet" href="print.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "firebase/app": "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js",
+          "firebase/auth": "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js",
+          "firebase/firestore": "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js"
+        }
+      }
+    </script>
   </head>
 
   <body>
@@ -143,6 +152,32 @@
         </div>
 
         <div class="top-right">
+          <div class="barcode-dropdown">
+            <button
+              class="barcode-button"
+              id="barcode-button"
+              title="Barcode Options"
+            >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M2 7h20M6 7v10M10 7v10M14 7v10M18 7v10"></path>
+              </svg>
+            </button>
+            <div class="barcode-menu" id="barcode-menu">
+              <div class="barcode-option" data-action="create">
+                Create Barcode
+              </div>
+              <div class="barcode-option" data-action="your-barcodes">
+                Your Barcodes
+              </div>
+            </div>
+          </div>
           <button id="logout-btn" class="logout-button" title="Logout">
             <svg
               width="20"
@@ -213,9 +248,130 @@
       </div>
     </div>
 
+    <!-- Create Barcode Modal -->
+    <div id="create-barcode-modal" class="modal-overlay">
+      <div class="modal-content">
+        <h3 id="create-barcode-title">Create Barcode</h3>
+
+        <!-- ISBN Entry Step -->
+        <div id="isbn-step" class="modal-step">
+          <p>Enter ISBN:</p>
+          <input
+            type="text"
+            id="isbn-input"
+            placeholder="Enter ISBN number"
+            class="modal-input"
+          />
+          <div class="modal-buttons">
+            <button id="isbn-cancel" class="modal-btn modal-btn-cancel">
+              Cancel
+            </button>
+            <button id="isbn-submit" class="modal-btn modal-btn-confirm">
+              Submit
+            </button>
+            <button id="no-isbn-btn" class="modal-btn modal-btn-secondary">
+              No ISBN
+            </button>
+          </div>
+        </div>
+
+        <!-- Manual Entry Step -->
+        <div id="manual-step" class="modal-step" style="display: none">
+          <p>Enter Book Information:</p>
+          <input
+            type="text"
+            id="title-input"
+            placeholder="Book Title"
+            class="modal-input"
+          />
+          <input
+            type="text"
+            id="author-input"
+            placeholder="Author"
+            class="modal-input"
+          />
+          <div class="modal-buttons">
+            <button id="manual-back" class="modal-btn modal-btn-cancel">
+              Back
+            </button>
+            <button id="manual-submit" class="modal-btn modal-btn-confirm">
+              Create Barcode
+            </button>
+          </div>
+        </div>
+
+        <!-- Loading/Processing -->
+        <div id="barcode-processing" class="modal-step" style="display: none">
+          <div class="loading-spinner"></div>
+          <p id="processing-text">Processing...</p>
+        </div>
+
+        <!-- Success -->
+        <div id="barcode-success" class="modal-step" style="display: none">
+          <div class="success-icon">✓</div>
+          <p id="success-text">Barcode created successfully!</p>
+          <div id="barcode-preview" class="barcode-preview"></div>
+          <div class="modal-buttons">
+            <button id="success-close" class="modal-btn modal-btn-confirm">
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Your Barcodes Modal -->
+    <div id="your-barcodes-modal" class="modal-overlay">
+      <div class="modal-content your-barcodes-modal-content">
+        <div class="your-barcodes-header">
+          <h3>Your Barcodes</h3>
+          <button class="your-barcodes-close-btn" id="your-barcodes-close-btn">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+        <div class="your-barcodes-content" id="your-barcodes-content">
+          <!-- Barcode cards will be inserted here -->
+        </div>
+        <div class="your-barcodes-actions" id="your-barcodes-actions">
+          <div class="select-all-barcodes">
+            <label class="select-all-barcodes-label">
+              <input type="checkbox" id="select-all-barcodes-checkbox" />
+              <span>Select All</span>
+            </label>
+          </div>
+          <div class="barcode-action-buttons">
+            <button
+              id="delete-selected-barcodes"
+              class="modal-btn modal-btn-danger"
+              disabled
+            >
+              Delete Selected
+            </button>
+            <button
+              id="print-selected-barcodes"
+              class="modal-btn modal-btn-confirm"
+              disabled
+            >
+              Print Selected
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div id="print-area"></div>
 
-    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
-    <script src="renderer.js"></script>
+    <script type="module" src="./js/app.js"></script>
+    <script type="module" src="./js/barcodeScanner.js"></script>
   </body>
 </html>

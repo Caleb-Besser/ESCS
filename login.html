@@ -3,53 +3,272 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Easy Student Checkout System (ESCS)</title>
-    <link rel="stylesheet" href="login.css" />
+    <title>ESCS - Login</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu,
+          Cantarell, sans-serif;
+        background: linear-gradient(135deg, #0f766e 0%, #0d9488 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+
+      .login-container {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        width: 100%;
+        max-width: 400px;
+        padding: 40px;
+      }
+
+      .login-header {
+        text-align: center;
+        margin-bottom: 32px;
+      }
+
+      .login-header h1 {
+        color: #0f766e;
+        font-size: 28px;
+        margin-bottom: 8px;
+      }
+
+      .login-header p {
+        color: #64748b;
+        font-size: 14px;
+      }
+
+      .form-group {
+        margin-bottom: 16px;
+      }
+
+      label {
+        display: block;
+        color: #475569;
+        font-weight: 500;
+        margin-bottom: 8px;
+        font-size: 14px;
+      }
+
+      input[type="email"],
+      input[type="password"],
+      input[type="text"] {
+        width: 100%;
+        padding: 12px 16px;
+        border: 2px solid #e5e7eb;
+        border-radius: 8px;
+        font-size: 14px;
+        transition: border-color 0.2s;
+        font-family: inherit;
+      }
+
+      input[type="email"]:focus,
+      input[type="password"]:focus,
+      input[type="text"]:focus {
+        outline: none;
+        border-color: #0d9488;
+      }
+
+      .checkbox-group {
+        display: flex;
+        align-items: center;
+        margin-bottom: 24px;
+        gap: 8px;
+      }
+
+      input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+        accent-color: #0d9488;
+      }
+
+      .checkbox-group label {
+        margin-bottom: 0;
+        cursor: pointer;
+        color: #64748b;
+      }
+
+      .form-buttons {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 20px;
+      }
+
+      button[type="submit"] {
+        flex: 1;
+        padding: 12px 24px;
+        background: #0d9488;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 0.2s;
+      }
+
+      button[type="submit"]:hover:not(:disabled) {
+        background: #0f766e;
+        transform: translateY(-1px);
+      }
+
+      button[type="submit"]:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+
+      .toggle-text {
+        text-align: center;
+        color: #64748b;
+        font-size: 14px;
+        margin-top: 20px;
+      }
+
+      .toggle-text span {
+        color: #0d9488;
+        cursor: pointer;
+        font-weight: 600;
+      }
+
+      .toggle-text span:hover {
+        text-decoration: underline;
+      }
+
+      #login-form {
+        display: block;
+      }
+
+      #register-form {
+        display: none;
+      }
+
+      .form-title {
+        font-size: 20px;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 24px;
+        text-align: center;
+      }
+
+      @keyframes slideIn {
+        from {
+          transform: translateX(400px);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+    </style>
   </head>
+
   <body>
     <div class="login-container">
-      <div class="logo-section">
+      <div class="login-header">
         <h1>ESCS</h1>
-        <p>Manage your student book checkouts</p>
+        <p>Easy Student Checkout System</p>
       </div>
 
-      <h2 id="form-title">Login</h2>
+      <!-- Login Form -->
+      <form id="login-form">
+        <div class="form-title">Sign In</div>
 
-      <div class="error" id="error-message"></div>
-
-      <form id="auth-form">
-        <div class="input-group">
-          <label for="email">Email</label>
-          <input type="email" id="email" required autocomplete="email" />
-        </div>
-
-        <div class="input-group">
-          <label for="password">Password</label>
+        <div class="form-group">
+          <label for="login-email">Email</label>
           <input
-            type="password"
-            id="password"
+            type="email"
+            id="login-email"
+            placeholder="Enter your email"
             required
-            autocomplete="current-password"
-            minlength="6"
           />
         </div>
 
-        <div class="remember-me">
-          <input type="checkbox" id="remember-me" />
-          <label for="remember-me">Remember me for 15 days</label>
+        <div class="form-group">
+          <label for="login-password">Password</label>
+          <input
+            type="password"
+            id="login-password"
+            placeholder="Enter your password"
+            required
+          />
         </div>
 
-        <button type="submit" id="submit-btn">
-          <span id="btn-text">Login</span>
-        </button>
+        <div class="checkbox-group">
+          <input type="checkbox" id="remember-me" />
+          <label for="remember-me">Remember me</label>
+        </div>
+
+        <div class="form-buttons">
+          <button type="submit">Login</button>
+        </div>
+
+        <div class="toggle-text" id="toggle-text">
+          Don't have an account?
+          <span>Register</span>
+        </div>
       </form>
 
-      <div class="toggle-link">
-        <span id="toggle-text">Don't have an account?</span>
-        <a id="toggle-link">Register</a>
-      </div>
+      <!-- Register Form -->
+      <form id="register-form">
+        <div class="form-title">Create Account</div>
+
+        <div class="form-group">
+          <label for="register-email">Email</label>
+          <input
+            type="email"
+            id="register-email"
+            placeholder="Enter your email"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="register-password">Password</label>
+          <input
+            type="password"
+            id="register-password"
+            placeholder="At least 6 characters"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="register-confirm">Confirm Password</label>
+          <input
+            type="password"
+            id="register-confirm"
+            placeholder="Confirm your password"
+            required
+          />
+        </div>
+
+        <div class="form-buttons">
+          <button type="submit">Create Account</button>
+        </div>
+
+        <div class="toggle-text" id="toggle-text">
+          Already have an account?
+          <span>Login</span>
+        </div>
+      </form>
     </div>
 
-    <script src="login.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+    <script type="module" src="login.js"></script>
   </body>
 </html>

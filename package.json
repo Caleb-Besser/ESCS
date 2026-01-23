@@ -11,7 +11,9 @@
     "make": "electron-forge make",
     "build": "npm run make -- --platform=win32",
     "build:portable": "electron-forge package --platform=win32 --arch=x64",
-    "quick-build": "electron-builder --win --dir"
+    "quick-build": "electron-builder --win --dir",
+    "test:headed": "npx playwright test --headed",
+    "test:headless": "npx playwright test"
   },
   "devDependencies": {
     "@electron-forge/cli": "^7.11.1",
@@ -20,12 +22,14 @@
     "@electron-forge/plugin-auto-unpack-natives": "^7.11.1",
     "@electron-forge/plugin-fuses": "^7.11.1",
     "@electron/fuses": "^1.8.0",
+    "@playwright/test": "^1.57.0",
     "electron": "^28.0.0",
     "electron-builder": "^26.4.0"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
     "electron-squirrel-startup": "^1.0.1",
-    "electron-store": "^11.0.2"
+    "electron-store": "^11.0.2",
+    "firebase": "^12.8.0"
   }
 }
