@@ -26,6 +26,7 @@ import {
   showCreateBarcodeModal,
   showYourBarcodesModal,
 } from "./modalManager.js";
+
 window.appState = {
   studentsContainer: null,
   selectedBooksContainer: null,
@@ -33,7 +34,8 @@ window.appState = {
   logoutBtn: null,
   barcodeInput: null,
   selectedStudents: [],
-  currentSort: "name", // or your default sort
+  dynamicControls: null, // ADDED THIS LINE
+  currentSort: "name",
 };
 
 window.onload = async () => {
@@ -70,7 +72,7 @@ window.onload = async () => {
     appState.barcodeButton = document.getElementById("barcode-button");
     appState.barcodeMenu = document.getElementById("barcode-menu");
     appState.stateIndicator = document.getElementById("state-indicator");
-    appState.dynamicControls = document.getElementById("dynamic-controls");
+    appState.dynamicControls = document.getElementById("dynamic-controls"); // THIS SHOULD NOW WORK
 
     if (!appState.studentsContainer) return;
 
