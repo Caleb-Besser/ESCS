@@ -1,5 +1,3 @@
-// Modal management functions
-
 function showConfirm(title, message, isDanger = false) {
   return new Promise((resolve) => {
     const modal = document.getElementById("confirm-modal");
@@ -81,10 +79,19 @@ function showAddStudentModal() {
   });
 }
 
-function showStudentHistoryModal(studentId, studentName) {
+async function showStudentHistoryModal(studentId, studentName) {
   return new Promise(async (resolve) => {
-    // Get history data
-    const history = await ipcRenderer.invoke("get-student-history", studentId);
+    // Import Firebase function to get history - FIXED IMPORT
+    const { getStudentHistory } = await import("../firebaseDB.js");
+
+    // Get history data from Firebase
+    let history = [];
+    try {
+      history = await getStudentHistory(studentId);
+    } catch (error) {
+      console.error("Error fetching history:", error);
+      // Continue with empty history
+    }
 
     // Create modal
     const modal = document.createElement("div");
@@ -313,29 +320,40 @@ function showCreateBarcodeModal() {
         document.getElementById("success-text").textContent =
           `Barcode created successfully for "${title}"`;
 
-        // Generate barcode preview
+        // Generate barcode preview - FIXED
         const previewContainer = document.getElementById("barcode-preview");
         previewContainer.innerHTML = "";
         const svg = document.createElementNS(
           "http://www.w3.org/2000/svg",
           "svg",
         );
-        svg.setAttribute("jsbarcode-format", "CODE128");
-        svg.setAttribute("jsbarcode-value", barcodeId);
-        svg.setAttribute("jsbarcode-displayValue", "true");
+        // Set attributes correctly
+        svg.setAttribute("class", "barcode-svg-preview");
+        svg.setAttribute("data-value", barcodeId);
         svg.setAttribute("width", "200");
         svg.setAttribute("height", "80");
         previewContainer.appendChild(svg);
 
+        // Apply JsBarcode
         if (window.JsBarcode) {
-          window.JsBarcode(svg, barcodeId, {
-            format: "CODE128",
-            displayValue: true,
-            height: 50,
-            width: 2,
-            fontSize: 12,
-            margin: 5,
-          });
+          try {
+            JsBarcode(svg, barcodeId, {
+              format: "CODE128",
+              displayValue: true,
+              height: 50,
+              width: 2,
+              fontSize: 12,
+              margin: 5,
+              background: "#ffffff",
+            });
+          } catch (error) {
+            console.error("Error generating barcode:", error);
+            // Fallback: Show barcode value as text
+            svg.innerHTML = `<text x="50%" y="50%" text-anchor="middle" fill="#666">${barcodeId}</text>`;
+          }
+        } else {
+          // JsBarcode not loaded yet
+          svg.innerHTML = `<text x="50%" y="50%" text-anchor="middle" fill="#666">${barcodeId}</text>`;
         }
       } catch (error) {
         console.error("Error processing ISBN:", error);
@@ -365,29 +383,39 @@ function showCreateBarcodeModal() {
         document.getElementById("success-text").textContent =
           `Barcode created successfully for "${title}"`;
 
-        // Generate barcode preview
+        // Generate barcode preview - FIXED
         const previewContainer = document.getElementById("barcode-preview");
         previewContainer.innerHTML = "";
         const svg = document.createElementNS(
           "http://www.w3.org/2000/svg",
           "svg",
         );
-        svg.setAttribute("jsbarcode-format", "CODE128");
-        svg.setAttribute("jsbarcode-value", barcodeId);
-        svg.setAttribute("jsbarcode-displayValue", "true");
+        // Set attributes correctly
+        svg.setAttribute("class", "barcode-svg-preview");
+        svg.setAttribute("data-value", barcodeId);
         svg.setAttribute("width", "200");
         svg.setAttribute("height", "80");
         previewContainer.appendChild(svg);
 
+        // Apply JsBarcode
         if (window.JsBarcode) {
-          window.JsBarcode(svg, barcodeId, {
-            format: "CODE128",
-            displayValue: true,
-            height: 50,
-            width: 2,
-            fontSize: 12,
-            margin: 5,
-          });
+          try {
+            JsBarcode(svg, barcodeId, {
+              format: "CODE128",
+              displayValue: true,
+              height: 50,
+              width: 2,
+              fontSize: 12,
+              margin: 5,
+              background: "#ffffff",
+            });
+          } catch (error) {
+            console.error("Error generating barcode:", error);
+            // Fallback
+            svg.innerHTML = `<text x="50%" y="50%" text-anchor="middle" fill="#666">${barcodeId}</text>`;
+          }
+        } else {
+          svg.innerHTML = `<text x="50%" y="50%" text-anchor="middle" fill="#666">${barcodeId}</text>`;
         }
       } catch (error) {
         console.error("Error processing manual entry:", error);
@@ -470,7 +498,7 @@ function showYourBarcodesModal() {
 
         card.innerHTML = `
           <input type="checkbox" class="barcode-select-checkbox" data-index="${index}">
-          <svg class="barcode-svg" data-isbn="${barcode.isbn}"></svg>
+          <div class="barcode-svg-container"></div>
           <div class="barcode-info">
             <div class="barcode-title">${barcode.title || "Unknown Book"}</div>
             <div class="barcode-author">${barcode.author || "Unknown Author"}</div>
@@ -499,16 +527,35 @@ function showYourBarcodesModal() {
         content.appendChild(card);
 
         // Generate barcode SVG
-        const svg = card.querySelector(".barcode-svg");
-        if (window.JsBarcode) {
-          window.JsBarcode(svg, barcode.isbn, {
-            format: "CODE128",
-            displayValue: true,
-            height: 40,
-            width: 2,
-            fontSize: 10,
-            margin: 5,
-          });
+        const svgContainer = card.querySelector(".barcode-svg-container");
+        if (window.JsBarcode && svgContainer) {
+          const svg = document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "svg",
+          );
+          svg.setAttribute("class", "barcode-svg");
+          svg.setAttribute("data-isbn", barcode.isbn);
+          svg.setAttribute("width", "180");
+          svg.setAttribute("height", "60");
+          svgContainer.appendChild(svg);
+
+          try {
+            JsBarcode(svg, barcode.isbn, {
+              format: "CODE128",
+              displayValue: true,
+              height: 40,
+              width: 2,
+              fontSize: 10,
+              margin: 5,
+              background: "#ffffff",
+            });
+          } catch (error) {
+            console.error("Error generating barcode for list:", error);
+            svg.innerHTML = `<text x="50%" y="50%" text-anchor="middle" fill="#666" font-size="10">${barcode.isbn}</text>`;
+          }
+        } else if (svgContainer) {
+          // Fallback if JsBarcode not loaded
+          svgContainer.innerHTML = `<div style="text-align: center; color: #666; font-size: 10px;">${barcode.isbn}</div>`;
         }
 
         // Handle size dropdown
@@ -536,7 +583,7 @@ function showYourBarcodesModal() {
                 e.stopPropagation();
                 const newSize = option.dataset.size;
                 const sizeText = option.textContent;
-                sizeButton.innerHTML = `Size: ${sizeText.split(" ")[0]}<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>`;
+                sizeButton.innerHTML = `Size: ${sizeText.split(" (")[0]}<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>`;
                 sizeButton.dataset.size = newSize;
                 sizeMenu.style.display = "none";
               });
@@ -639,71 +686,72 @@ function showYourBarcodesModal() {
       });
 
       let html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Print Barcodes</title>
-      <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        @page { size: letter; margin: 0.5in; }
-        body { font-family: Arial, sans-serif; background: #fff; padding-top: 80px; }
-        .barcodes-container { display: flex; flex-wrap: wrap; gap: 15px; justify-content: flex-start; }
-        .barcode-item { border: 2px dotted #0f766e; border-radius: 8px; padding: 15px; text-align: center; page-break-inside: avoid; background: white; }
-        .barcode-item.small { width: 2.5in; height: 1.5in; padding: 10px; }
-        .barcode-item.medium { width: 3in; height: 2in; padding: 15px; }
-        .barcode-item.large { width: 3.5in; height: 2.5in; padding: 20px; }
-        .barcode-title { font-weight: bold; margin-bottom: 5px; font-size: 12px; color: #0f766e; }
-        .barcode-item.small .barcode-title { font-size: 10px; }
-        .barcode-item.large .barcode-title { font-size: 14px; }
-        .barcode-author { color: #64748b; margin-bottom: 10px; font-size: 10px; }
-        .barcode-item.small .barcode-author { font-size: 8px; }
-        .barcode-item.large .barcode-author { font-size: 12px; }
-        .barcode-svg { max-width: 100%; height: auto; margin-bottom: 5px; }
-        .print-controls { position: fixed; top: 0; left: 0; width: 100%; background: #0f766e; padding: 15px; display: flex; justify-content: flex-end; z-index: 1000; }
-        .print-btn { background: #0d9488; color: white; border: none; padding: 10px 24px; border-radius: 6px; font-weight: bold; cursor: pointer; }
-        .print-btn:hover { background: #0f766e; }
-        @media print { body { padding-top: 0; } .no-print { display: none !important; } }
-      </style>
-      <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"><\/script></head><body>
-      <div class="print-controls no-print"><button class="print-btn" onclick="window.print()">Print Barcodes</button></div>
-      <div class="barcodes-container">`;
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      @page { size: letter; margin: 0.5in; }
+      body { font-family: Arial, sans-serif; background: #fff; padding-top: 80px; }
+      .barcodes-container { display: flex; flex-wrap: wrap; gap: 15px; justify-content: flex-start; }
+      .barcode-item { border: 2px dotted #0f766e; border-radius: 8px; padding: 15px; text-align: center; page-break-inside: avoid; background: white; }
+      .barcode-item.small { width: 2.5in; height: 1.5in; padding: 10px; }
+      .barcode-item.medium { width: 3in; height: 2in; padding: 15px; }
+      .barcode-item.large { width: 3.5in; height: 2.5in; padding: 20px; }
+      .barcode-title { font-weight: bold; margin-bottom: 5px; font-size: 12px; color: #0f766e; }
+      .barcode-item.small .barcode-title { font-size: 10px; }
+      .barcode-item.large .barcode-title { font-size: 14px; }
+      .barcode-author { color: #64748b; margin-bottom: 10px; font-size: 10px; }
+      .barcode-item.small .barcode-author { font-size: 8px; }
+      .barcode-item.large .barcode-author { font-size: 12px; }
+      .barcode-svg { max-width: 100%; height: auto; margin-bottom: 5px; }
+      .print-controls { position: fixed; top: 0; left: 0; width: 100%; background: #0f766e; padding: 15px; display: flex; justify-content: flex-end; z-index: 1000; }
+      .print-btn { background: #0d9488; color: white; border: none; padding: 10px 24px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+      .print-btn:hover { background: #0f766e; }
+      @media print { body { padding-top: 0; } .no-print { display: none !important; } }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"><\/script></head><body>
+    <div class="print-controls no-print"><button class="print-btn" onclick="window.print()">Print Barcodes</button></div>
+    <div class="barcodes-container">`;
 
       selectedItems.forEach((item) => {
         const { barcode, size } = item;
         html += `
-          <div class="barcode-item ${size}">
-            <div class="barcode-title">${barcode.title || "Unknown Book"}</div>
-            <div class="barcode-author">${barcode.author || "Unknown Author"}</div>
-            <svg class="barcode-svg" data-isbn="${barcode.isbn}" data-size="${size}"></svg>
-          </div>
-        `;
+      <div class="barcode-item ${size}">
+        <div class="barcode-title">${barcode.title || "Unknown Book"}</div>
+        <div class="barcode-author">${barcode.author || "Unknown Author"}</div>
+        <svg class="barcode-svg" data-isbn="${barcode.isbn}" data-size="${size}"></svg>
+      </div>
+    `;
       });
 
       html += `</div><script>
-      document.querySelectorAll('.barcode-svg').forEach(svg => {
-        const size = svg.getAttribute('data-size');
-        let height = 45;
-        let fontSize = 14;
-        let margin = 5;
+    document.querySelectorAll('.barcode-svg').forEach(svg => {
+      const size = svg.getAttribute('data-size');
+      let height = 45;
+      let fontSize = 14;
+      let margin = 5;
 
-        if (size === 'small') {
-          height = 30;
-          fontSize = 10;
-          margin = 3;
-        } else if (size === 'large') {
-          height = 60;
-          fontSize = 16;
-          margin = 8;
-        }
+      if (size === 'small') {
+        height = 30;
+        fontSize = 10;
+        margin = 3;
+      } else if (size === 'large') {
+        height = 60;
+        fontSize = 16;
+        margin = 8;
+      }
 
-        JsBarcode(svg, svg.getAttribute('data-isbn'), {
-          format: 'CODE128',
-          displayValue: true,
-          height: height,
-          width: 2,
-          fontSize: fontSize,
-          margin: margin
-        });
+      JsBarcode(svg, svg.getAttribute('data-isbn'), {
+        format: 'CODE128',
+        displayValue: true,
+        height: height,
+        width: 2,
+        fontSize: fontSize,
+        margin: margin
       });
-    <\/script></body></html>`;
+    });
+  <\/script></body></html>`;
 
-      ipcRenderer.send("open-print-preview", html);
+      // Use the same print function
+      window.openPrintPreview(html);
     };
 
     // Helper functions

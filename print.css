@@ -7,23 +7,25 @@ body {
   background: #fff;
 }
 
-/* Page container */
+/* Page container for 8 cards */
 .print-cards-page {
-  width: 8.5in; /* Standard letter width */
-  height: 11in; /* Standard letter height */
+  width: 8.5in;
+  height: 11in;
   display: flex;
   flex-wrap: wrap;
-  padding: 0.5in;
+  align-content: flex-start;
+  padding: 0.25in;
   box-sizing: border-box;
+  gap: 0.125in;
 }
 
-/* Individual card (ID size) */
+/* Individual ID card - 8 per page (2 rows x 4 columns) */
 .print-card {
-  width: 3.375in; /* ~ID card width */
-  height: 2.125in; /* ~ID card height */
-  border: 1px solid #000;
+  width: 3.375in; /* (8.5in - (0.25in * 2) - (0.125in * 3)) / 4 */
+  height: 2.125in; /* (11in - (0.25in * 2) - (0.125in)) / 2 */
+  border: 2px dotted #000;
   border-radius: 0.1in;
-  margin: 0.125in;
+  margin: 0;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -33,35 +35,44 @@ body {
   font-size: 12pt;
   box-sizing: border-box;
   padding: 0.15in;
+  break-inside: avoid;
+  page-break-inside: avoid;
 }
 
-/* Name styling */
-.print-card .print-name {
+/* Name at top */
+.print-card .student-name {
   font-weight: bold;
   font-size: 14pt;
   text-align: center;
   margin-bottom: 0.1in;
+  width: 100%;
 }
 
-/* ID styling */
-.print-card .print-id {
+/* Barcode in middle */
+.print-card .print-barcode {
+  margin: 0.1in 0;
+  width: 90%;
+  text-align: center;
+}
+
+.print-card .print-barcode svg {
+  width: 100%;
+  height: auto;
+  max-height: 0.6in;
+  display: block;
+}
+
+/* ID at bottom */
+.print-card .student-id {
   font-size: 10pt;
   color: #333;
   margin-top: 0.05in;
   text-align: center;
   letter-spacing: 1px;
+  width: 100%;
 }
 
-/* Barcode styling */
-.print-card .print-barcode svg {
-  width: 90%;
-  height: auto;
-  margin-top: 0.1in;
-  display: block;
-  fill: #000;
-}
-
-/* Remove color, shadows, or gradients */
+/* Remove color, shadows, or gradients for printing */
 .print-card *,
 .print-card {
   color: #000 !important;
@@ -69,7 +80,19 @@ body {
   box-shadow: none !important;
 }
 
-/* Force page breaks */
+/* Force page breaks after every 8 cards */
 .print-cards-page {
   page-break-after: always;
+}
+
+/* Hide non-print elements */
+.no-print {
+  display: none !important;
+}
+
+/* Ensure barcodes print in black */
+.print-barcode svg path,
+.print-barcode svg rect {
+  fill: #000 !important;
+  stroke: #000 !important;
 }

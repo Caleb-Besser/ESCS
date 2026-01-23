@@ -39,6 +39,22 @@ ipcMain.handle("get-old-data", async () => {
     return { students: null, history: null };
   }
 });
+// Add this to your IPC handlers in main.js
+ipcMain.handle("get-student-history", async (event, studentId) => {
+  try {
+    // You might need to get the user ID from the current session
+    // This is a simplified version - adjust based on your auth setup
+    const { default: Store } = await import("electron-store");
+    const store = new Store();
+
+    // Get history from the old storage or Firebase
+    const history = store.get(`history_${studentId}`);
+    return history || [];
+  } catch (error) {
+    console.error("Error getting student history via IPC:", error);
+    return [];
+  }
+});
 
 async function createWindow() {
   app.setAppUserModelId("com.escs.checkout");
@@ -51,7 +67,7 @@ async function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: path.join(__dirname, "preload.js"), // ADD THIS LINE
+      preload: path.join(__dirname, "preload.js"),
     },
   });
 

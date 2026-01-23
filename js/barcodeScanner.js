@@ -1,4 +1,4 @@
-// barcodeScanner.js - Updated for Firebase
+// barcodeScanner.js - Updated for new appState structure
 import {
   getStudents,
   updateStudentBooks as firebaseUpdateStudentBooks,
@@ -66,8 +66,20 @@ function setupBarcodeScanner() {
       lastScanTime = Date.now();
 
       try {
-        const allStudents = await getStudents();
-        const scannedStudent = allStudents.find((s) => s.id === scanned);
+        // Import functions dynamically
+        const {
+          showConfirm,
+          showToast,
+          addStudentToList,
+          sortStudents,
+          renderSelectedBooks,
+        } = await import("./uiRenderer.js");
+        const { updateDynamicControls } = await import("./app.js");
+
+        // Check if scanning a student ID
+        const scannedStudent = appState.allStudents.find(
+          (s) => s.id === scanned,
+        );
 
         // If scanning a student ID
         if (scannedStudent) {
@@ -81,6 +93,7 @@ function setupBarcodeScanner() {
             card.classList.add("selected");
             appState.selectedStudents = [scanned];
             renderSelectedBooks();
+            updateDynamicControls(1);
             card.scrollIntoView({ behavior: "smooth", block: "nearest" });
             showToast(`✓ Selected: ${scannedStudent.name}`, "#10b981");
           }
@@ -100,7 +113,7 @@ function setupBarcodeScanner() {
         }
 
         const studentId = appState.selectedStudents[0];
-        const student = allStudents.find((s) => s.id === studentId);
+        const student = appState.allStudents.find((s) => s.id === studentId);
         if (!student) {
           appState.barcodeInput.value = "";
           setTimeout(focusBarcodeInput, 100);
@@ -111,6 +124,7 @@ function setupBarcodeScanner() {
         // Check if book is already checked out
         const existingBook = student.books?.find((b) => b.isbn === scanned);
 
+        // barcodeScanner.js - Update check-in section
         if (existingBook) {
           // Book check-in
           const confirmCheckin = await showConfirm(
@@ -122,11 +136,13 @@ function setupBarcodeScanner() {
             const updatedBooks = student.books.filter(
               (b) => b.isbn !== scanned,
             );
+
             await firebaseUpdateStudentBooks(
               studentId,
               updatedBooks,
               "checkin",
             );
+
             showToast(
               `✓ Checked in: ${existingBook.title || scanned}`,
               "#10b981",
@@ -175,6 +191,7 @@ function setupBarcodeScanner() {
 
         // Refresh the student list
         const updatedStudents = await getStudents();
+        appState.allStudents = updatedStudents;
         appState.studentsContainer.innerHTML = "";
         const sortedStudents = sortStudents(
           updatedStudents,
@@ -191,8 +208,11 @@ function setupBarcodeScanner() {
         }
 
         renderSelectedBooks();
+        updateDynamicControls(1);
       } catch (error) {
         console.error("Scan error:", error);
+        // Import showToast if needed
+        const { showToast } = await import("./uiRenderer.js");
         showToast("Error processing scan. Please try again.", "#ef4444");
       } finally {
         appState.barcodeInput.value = "";

@@ -1,72 +1,22 @@
-// studentManager.js - Updated for Firebase & Exports
-import {
-  getStudents,
-  addStudent as firebaseAddStudent,
-  removeStudents as firebaseRemoveStudents,
-} from "../firebaseDB.js";
-import {
-  addStudentToList,
-  sortStudents,
-  renderSelectedBooks,
-  showToast,
-  showConfirm,
-} from "./uiRenderer.js";
-import { focusBarcodeInput } from "./barcodeScanner.js";
+// studentManager.js - Keep minimal or remove if not needed
+// This file might not be needed anymore since we moved logic to app.js
+// You can delete it or keep it for future use
 
 export async function addStudent(studentName) {
-  if (!studentName) return;
-  try {
-    const updated = await firebaseAddStudent(studentName);
-    appState.studentsContainer.innerHTML = "";
-    appState.selectedStudents = [];
-    const sortedStudents = sortStudents(updated, appState.currentSort);
-    sortedStudents.forEach(addStudentToList);
-    renderSelectedBooks();
-    setTimeout(focusBarcodeInput, 500);
-  } catch (error) {
-    showToast("Error adding student", "#ef4444");
-  }
+  // This is now handled in app.js
+  console.warn(
+    "addStudent from studentManager.js is deprecated. Use app.js functions instead.",
+  );
 }
 
 export async function handlePrint() {
-  if (!appState.selectedStudents.length) {
-    showToast("Select at least one student.", "#ef4444");
-    return;
-  }
-  try {
-    const all = await getStudents();
-    const toPrint = all.filter((s) => appState.selectedStudents.includes(s.id));
-    // ... (Keep existing print HTML logic)
-    console.log("Printing students:", toPrint);
-    if (window.electronAPI) {
-      // window.electronAPI.openPrintPreview(html);
-    }
-  } catch (error) {
-    showToast("Error preparing print", "#ef4444");
-  }
+  console.warn(
+    "handlePrint from studentManager.js is deprecated. Use app.js functions instead.",
+  );
 }
 
 export async function handleRemoveStudent() {
-  if (!appState.selectedStudents.length) {
-    showToast("No students selected.", "#ef4444");
-    return;
-  }
-  const confirmed = await showConfirm(
-    "Remove Students",
-    `Remove ${appState.selectedStudents.length} student(s)?`,
-    true,
+  console.warn(
+    "handleRemoveStudent from studentManager.js is deprecated. Use app.js functions instead.",
   );
-  if (!confirmed) return;
-  try {
-    const updated = await firebaseRemoveStudents(appState.selectedStudents);
-    appState.studentsContainer.innerHTML = "";
-    appState.selectedStudents = [];
-    const sortedStudents = sortStudents(updated, appState.currentSort);
-    sortedStudents.forEach(addStudentToList);
-    renderSelectedBooks();
-    setTimeout(focusBarcodeInput, 500);
-    showToast("Students removed successfully", "#10b981");
-  } catch (error) {
-    showToast("Error removing students", "#ef4444");
-  }
 }

@@ -1,0 +1,112 @@
+<!-- quick-test.html -->
+<!doctype html>
+<html>
+  <head>
+    <title>Quick Tests</title>
+    <style>
+      body {
+        font-family: Arial;
+        padding: 20px;
+      }
+      button {
+        margin: 5px;
+        padding: 10px;
+      }
+      .success {
+        color: green;
+      }
+      .error {
+        color: red;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Quick App Tests</h1>
+
+    <div id="results"></div>
+
+    <button onclick="runBasicChecks()">Run Basic Checks</button>
+    <button onclick="testPrint()">Test Print Function</button>
+    <button onclick="mockData()">Load Mock Data</button>
+
+    <script>
+      function log(message, isError = false) {
+        const results = document.getElementById("results");
+        const p = document.createElement("p");
+        p.textContent = message;
+        p.className = isError ? "error" : "success";
+        results.appendChild(p);
+      }
+
+      function runBasicChecks() {
+        log("Running basic checks...");
+
+        // Check 1: appState
+        if (!window.appState) {
+          log("❌ appState not found", true);
+          return;
+        }
+        log("✅ appState exists");
+
+        // Check 2: Key functions
+        const requiredFunctions = [
+          "printStudents",
+          "addStudentDirect",
+          "removeStudentsDirect",
+        ];
+        requiredFunctions.forEach((func) => {
+          if (typeof window[func] === "function") {
+            log(`✅ ${func} exists`);
+          } else {
+            log(`❌ ${func} missing`, true);
+          }
+        });
+      }
+
+      function testPrint() {
+        log("Testing print function...");
+
+        if (typeof window.printStudents !== "function") {
+          log("❌ printStudents not found", true);
+          return;
+        }
+
+        // Create test data
+        window.appState = window.appState || {};
+        window.appState.allStudents = [
+          {
+            id: "12345678",
+            name: "Test Student",
+            books: [],
+          },
+        ];
+        window.appState.selectedStudents = ["12345678"];
+
+        // Mock the print preview
+        const originalOpenPrintPreview = window.openPrintPreview;
+        window.openPrintPreview = function (html) {
+          log("✅ Print preview would open");
+          log(`📄 Generated ${html.length} characters of HTML`);
+          window.openPrintPreview = originalOpenPrintPreview;
+        };
+
+        try {
+          window.printStudents();
+          log("✅ printStudents executed successfully");
+        } catch (error) {
+          log(`❌ Error: ${error.message}`, true);
+        }
+      }
+
+      function mockData() {
+        window.appState = window.appState || {};
+        window.appState.allStudents = [
+          { id: "1001", name: "Alice Johnson", books: [] },
+          { id: "1002", name: "Bob Smith", books: [] },
+          { id: "1003", name: "Charlie Brown", books: [] },
+        ];
+        log("✅ Loaded 3 mock students");
+      }
+    </script>
+  </body>
+</html>

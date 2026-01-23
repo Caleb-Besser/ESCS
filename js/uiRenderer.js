@@ -1,6 +1,6 @@
-// uiRenderer.js - Updated for Firebase & Dynamic Controls
+// uiRenderer.js - Fixed centering and multiple selection display
 import { getStudentHistory as firebaseGetStudentHistory } from "../firebaseDB.js";
-import { handlePrint, handleRemoveStudent } from "./studentManager.js";
+import { updateDynamicControls } from "./app.js";
 
 // Global state
 window.appState = window.appState || {
@@ -11,9 +11,10 @@ window.appState = window.appState || {
   barcodeInput: null,
   selectedStudents: [],
   currentSort: "name-asc",
+  allStudents: [],
 };
 
-// Add student to the list
+// Add student to the list - RESTORED BETTER STYLING
 function addStudentToList(student) {
   if (!appState.studentsContainer) return;
 
@@ -24,22 +25,15 @@ function addStudentToList(student) {
   const bookCount = student.books ? student.books.length : 0;
   const hasBooks = bookCount > 0;
 
+  // REMOVED THE HISTORY BUTTON FROM THE CARD
+  // Added back the book count indicator on the right
   card.innerHTML = `
+    <div class="status-dot ${hasBooks ? "has-books" : "no-books"}"></div>
     <div class="student-info">
       <div class="student-name">${student.name}</div>
-      <div class="student-meta">
-        <span class="student-id">ID: ${student.id}</span>
-        <span class="student-books ${hasBooks ? "has-books" : ""}">${bookCount} book${bookCount !== 1 ? "s" : ""}</span>
-      </div>
+      <div class="student-id">ID: ${student.id}</div>
     </div>
-    <div class="student-actions">
-      <button class="history-btn" title="View Reading History">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M3 3v18h18"></path>
-          <path d="m19 9-5 5-4-4-3 3"></path>
-        </svg>
-      </button>
-    </div>
+    <div class="book-count ${bookCount === 0 ? "zero" : ""}">${bookCount}</div>
   `;
 
   card.addEventListener("click", (e) => {
@@ -62,12 +56,6 @@ function addStudentToList(student) {
     renderSelectedBooks();
   });
 
-  const historyBtn = card.querySelector(".history-btn");
-  historyBtn.addEventListener("click", async (e) => {
-    e.stopPropagation();
-    await showStudentHistoryModal(student.id, student.name);
-  });
-
   appState.studentsContainer.appendChild(card);
 }
 
@@ -80,35 +68,31 @@ function updateStudentSelection() {
     card.classList.toggle("selected", isSelected);
   });
 
-  // Render Dynamic Buttons at the bottom
-  const container = appState.dynamicControls;
-  if (!container) return;
-
-  if (appState.selectedStudents.length > 0) {
-    container.innerHTML = `
-      <div class="dynamic-actions-bar">
-        <span class="selection-count">${appState.selectedStudents.length} selected</span>
-        <div class="action-buttons">
-          <button id="print-selected-btn" class="btn-primary">Print Barcodes</button>
-          <button id="remove-selected-btn" class="btn-danger">Remove</button>
-        </div>
-      </div>
-    `;
-
-    // Re-attach listeners to the new dynamic buttons
-    document
-      .getElementById("print-selected-btn")
-      .addEventListener("click", handlePrint);
-    document
-      .getElementById("remove-selected-btn")
-      .addEventListener("click", handleRemoveStudent);
-  } else {
-    container.innerHTML = "";
+  // Update select all checkbox
+  const selectAllCheckbox = document.getElementById("select-all-checkbox");
+  if (selectAllCheckbox) {
+    const allSelected =
+      appState.selectedStudents.length === appState.allStudents.length;
+    const someSelected = appState.selectedStudents.length > 0 && !allSelected;
+    selectAllCheckbox.checked = allSelected;
+    selectAllCheckbox.indeterminate = someSelected;
   }
+
+  // Update dynamic controls
+  if (typeof updateDynamicControls === "function") {
+    updateDynamicControls(appState.selectedStudents.length);
+  }
+
+  // Dispatch event for other modules
+  const event = new CustomEvent("studentSelectionChanged", {
+    detail: { selectedCount: appState.selectedStudents.length },
+  });
+  window.dispatchEvent(event);
 }
 
 function sortStudents(students, sortType) {
   const sorted = [...students];
+
   switch (sortType) {
     case "name-asc":
       return sorted.sort((a, b) => a.name.localeCompare(b.name));
@@ -134,15 +118,115 @@ function sortStudents(students, sortType) {
 function renderSelectedBooks() {
   if (!appState.selectedBooksContainer || !appState.booksHeaderEl) return;
 
-  if (appState.selectedStudents.length === 0) {
+  const selectedCount = appState.selectedStudents.length;
+
+  if (selectedCount === 0) {
     appState.booksHeaderEl.textContent = "Select a student to view their books";
     appState.selectedBooksContainer.innerHTML = "";
+    appState.selectedBooksContainer.style.display = "flex"; // Changed
+    appState.selectedBooksContainer.style.justifyContent = "center"; // Changed
+    appState.selectedBooksContainer.style.alignItems = "center"; // Changed
     return;
   }
 
-  const studentId = appState.selectedStudents[0];
-  appState.booksHeaderEl.textContent = `Books for Student ${studentId}`;
-  appState.selectedBooksContainer.innerHTML = "<p>Books logic pending...</p>";
+  if (selectedCount === 1) {
+    // Single student selected
+    const studentId = appState.selectedStudents[0];
+    const student = appState.allStudents.find((s) => s.id === studentId);
+
+    if (!student) {
+      appState.booksHeaderEl.textContent = "Student not found";
+      appState.selectedBooksContainer.innerHTML = "";
+      appState.selectedBooksContainer.style.display = "flex"; // Changed
+      appState.selectedBooksContainer.style.justifyContent = "center"; // Changed
+      appState.selectedBooksContainer.style.alignItems = "center"; // Changed
+      return;
+    }
+
+    appState.booksHeaderEl.textContent = `Books for ${student.name}`;
+
+    const bookCount = student.books ? student.books.length : 0;
+    if (bookCount === 0) {
+      // Create a centered container for the no-books message
+      appState.selectedBooksContainer.innerHTML = "";
+      appState.selectedBooksContainer.style.display = "flex"; // Changed to flex
+      appState.selectedBooksContainer.style.justifyContent = "center";
+      appState.selectedBooksContainer.style.alignItems = "center";
+      appState.selectedBooksContainer.style.width = "100%";
+
+      const messageDiv = document.createElement("div");
+      messageDiv.className = "no-books-message";
+      messageDiv.innerHTML = `
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+        </svg>
+        <h3>No Books Checked Out</h3>
+        <p>Scan a book barcode to check out books for this student</p>
+      `;
+
+      appState.selectedBooksContainer.appendChild(messageDiv);
+    } else {
+      // Show books in grid
+      appState.selectedBooksContainer.innerHTML = "";
+      appState.selectedBooksContainer.style.display = "grid"; // Keep as grid for books
+      appState.selectedBooksContainer.style.gridTemplateColumns =
+        "repeat(auto-fill, minmax(320px, 1fr))";
+      appState.selectedBooksContainer.style.gap = "16px";
+      appState.selectedBooksContainer.style.width = "100%";
+      appState.selectedBooksContainer.style.maxWidth = "1400px";
+      appState.selectedBooksContainer.style.margin = "0 auto";
+
+      student.books.forEach((book) => {
+        const bookCard = document.createElement("div");
+        bookCard.className = "book-card";
+        bookCard.innerHTML = `
+          ${
+            book.cover
+              ? `<img src="${book.cover}" class="book-cover-img" alt="${book.title}">`
+              : `<div class="book-cover-placeholder">📚</div>`
+          }
+          <div class="book-details">
+            <div class="book-title">${book.title || "Unknown Book"}</div>
+            <div class="book-author">${book.author || "Unknown Author"}</div>
+            <div class="book-date">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+              </svg>
+              Checked out: ${book.checkoutDate || "Unknown"}
+            </div>
+          </div>
+        `;
+        appState.selectedBooksContainer.appendChild(bookCard);
+      });
+    }
+  } else {
+    // Multiple students selected
+    appState.booksHeaderEl.textContent = `${selectedCount} Students Selected`;
+
+    // Clear the books area or show a multi-selection message
+    appState.selectedBooksContainer.innerHTML = "";
+    appState.selectedBooksContainer.style.display = "flex"; // Changed to flex
+    appState.selectedBooksContainer.style.justifyContent = "center";
+    appState.selectedBooksContainer.style.alignItems = "center";
+    appState.selectedBooksContainer.style.width = "100%";
+
+    const messageDiv = document.createElement("div");
+    messageDiv.className = "no-books-message";
+    messageDiv.innerHTML = `
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+        <circle cx="12" cy="7" r="4"></circle>
+      </svg>
+      <h3>${selectedCount} Students Selected</h3>
+      <p>Select a single student to view their checked-out books</p>
+    `;
+
+    appState.selectedBooksContainer.appendChild(messageDiv);
+  }
 }
 
 function showToast(message, color = "#10b981") {
@@ -171,20 +255,6 @@ function showConfirm(title, message, isDanger = false) {
   });
 }
 
-async function showStudentHistoryModal(studentId, studentName) {
-  const history = await firebaseGetStudentHistory(studentId);
-  const modal = document.createElement("div");
-  modal.className = "history-modal-overlay";
-  modal.innerHTML = `
-    <div class="history-modal">
-      <div class="history-modal-header"><h3>${studentName}'s History</h3></div>
-      <div class="history-modal-content">${history.length === 0 ? "<p>No history found.</p>" : "History list goes here."}</div>
-      <div class="history-modal-footer"><button id="close-history">Close</button></div>
-    </div>`;
-  document.body.appendChild(modal);
-  document.getElementById("close-history").onclick = () => modal.remove();
-}
-
 export {
   addStudentToList,
   updateStudentSelection,
@@ -192,5 +262,4 @@ export {
   renderSelectedBooks,
   showToast,
   showConfirm,
-  showStudentHistoryModal,
 };

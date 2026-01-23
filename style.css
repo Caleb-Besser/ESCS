@@ -4,6 +4,13 @@
   padding: 0;
   box-sizing: border-box;
 }
+#selected-books-list {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  min-height: 300px;
+}
 
 body {
   font-family:
@@ -519,6 +526,68 @@ body {
   color: #64748b;
   font-size: 14px;
 }
+.books-area {
+  flex: 1;
+  padding: 32px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.books-header {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 24px;
+  text-align: center;
+  width: 100%;
+  max-width: 1400px;
+}
+
+/* Ensure grid layout only applies when there are books */
+#selected-books-list:has(.book-card) {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* Make sure the no-books-message is properly centered */
+.no-books-message {
+  text-align: center;
+  padding: 40px;
+  color: #64748b;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 2px dashed #e5e7eb;
+  max-width: 400px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.no-books-message h3 {
+  color: #1e293b;
+  margin: 16px 0 8px;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.no-books-message p {
+  font-size: 14px;
+  line-height: 1.5;
+  color: #94a3b8;
+}
+
+.no-books-message svg {
+  stroke: #cbd5e1;
+  margin-bottom: 8px;
+}
 
 .book-date {
   color: #64748b;
@@ -527,6 +596,98 @@ body {
   align-items: center;
   gap: 6px;
   margin-top: 4px;
+}
+
+/* Fix for barcode display issues */
+.barcode-svg-preview {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+}
+
+.barcode-svg-container {
+  width: 100%;
+  max-width: 160px;
+  height: auto;
+  margin-bottom: 12px;
+  padding: 8px;
+  background: #f8fafc;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.barcode-svg-container svg.barcode-svg {
+  width: 100%;
+  height: auto;
+  max-height: 40px;
+}
+
+/* Add these to login.css */
+
+.google-login-section {
+  margin: 24px 0;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  margin: 20px 0;
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+.divider::before,
+.divider::after {
+  content: "";
+  flex: 1;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.divider span {
+  padding: 0 16px;
+}
+
+.google-btn {
+  width: 100%;
+  padding: 12px;
+  background: white;
+  color: #374151;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  transition: all 0.2s;
+}
+
+.google-btn:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.google-btn:active {
+  transform: translateY(0);
+}
+
+.google-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Ensure barcodes in print preview work */
+.barcode-svg[data-isbn] {
+  width: 100%;
+  height: auto;
 }
 
 /* Dynamic Controls */
@@ -660,6 +821,159 @@ body {
 .no-books-message p {
   font-size: 16px;
   line-height: 1.5;
+}
+
+/* Add these styles to your style.css file */
+
+/* Status dot styling */
+.status-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-dot.has-books {
+  background: #10b981;
+}
+
+.status-dot.no-books {
+  background: #9ca3af;
+}
+
+/* Student info in card */
+.student-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.student-card .student-name {
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 15px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 2px;
+}
+
+.student-card .student-id {
+  color: #64748b;
+  font-size: 12px;
+  font-family: monospace;
+}
+
+/* Book count badge */
+.book-count {
+  background: #0d9488;
+  color: white;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  min-width: 24px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.book-count.zero {
+  background: #d1d5db;
+  color: #6b7280;
+}
+
+/* Remove the student-meta class styling if it exists */
+.student-meta {
+  display: none;
+}
+
+/* Student card layout */
+.student-card {
+  padding: 16px;
+  margin: 4px 0;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: all 0.2s;
+  background: white;
+  position: relative;
+}
+
+.student-card:hover {
+  background: #f1f5f9;
+}
+
+.student-card.selected {
+  background: #e0f2fe;
+  border-left: 4px solid #0d9488;
+}
+
+/* Add to style.css to fix centering issues */
+
+/* Center the no-books message properly */
+.no-books-message {
+  text-align: center;
+  padding: 40px;
+  color: #64748b;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 2px dashed #e5e7eb;
+  max-width: 400px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.no-books-message h3 {
+  color: #1e293b;
+  margin: 16px 0 8px;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.no-books-message p {
+  font-size: 14px;
+  line-height: 1.5;
+  color: #94a3b8;
+}
+
+.no-books-message svg {
+  stroke: #cbd5e1;
+  margin-bottom: 8px;
+}
+
+/* Ensure the books grid is properly centered */
+.books-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* Make sure the books area centers its content */
+.books-area {
+  flex: 1;
+  padding: 32px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.books-area:empty,
+.books-area:has(.no-books-message) {
+  justify-content: center;
+}
+
+/* Hide the student actions div since we removed history button */
+.student-actions {
+  display: none;
 }
 
 /* ========== MODALS ========== */
@@ -1440,5 +1754,73 @@ body {
   .top-right {
     position: relative;
     right: 0;
+  }
+}
+
+/* ========== PRINT STYLES ========== */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .print-section,
+  .print-section * {
+    visibility: visible;
+  }
+
+  .print-section {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  /* ID Card printing */
+  .id-card {
+    border: 2px dotted #000 !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
+
+/* Print preview styling */
+@media screen {
+  .print-cards-page {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: flex-start;
+    padding: 20px;
+  }
+
+  .id-card {
+    border: 2px dotted #ccc;
+    border-radius: 8px;
+    padding: 15px;
+    width: 3.375in;
+    height: 2.125in;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .id-card .student-name {
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 10px;
+    text-align: center;
+  }
+
+  .id-card .student-id {
+    font-size: 12px;
+    color: #666;
+    margin-top: 5px;
   }
 }
