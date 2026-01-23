@@ -124,6 +124,125 @@ window.onload = async () => {
   }
 };
 
+function updateDynamicControls(selectedCount) {
+  const controlsContainer = document.getElementById("dynamic-controls");
+  if (!controlsContainer) return;
+
+  controlsContainer.innerHTML = "";
+
+  if (selectedCount === 0) {
+    const addBtn = document.createElement("button");
+    addBtn.className = "dynamic-btn primary";
+    addBtn.innerHTML = `
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 5v14M5 12h14"/>
+      </svg>
+      Add Student
+    `;
+    addBtn.addEventListener("click", async () => {
+      const studentName = await showAddStudentModal();
+      if (studentName) {
+        await addStudent(studentName);
+      }
+    });
+    controlsContainer.appendChild(addBtn);
+  } else if (selectedCount === 1) {
+    // Add History Button FIRST
+    const historyBtn = document.createElement("button");
+    historyBtn.className = "dynamic-btn info";
+    historyBtn.innerHTML = `
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"></circle>
+        <polyline points="12 6 12 12 16 14"></polyline>
+      </svg>
+      View Reading History
+    `;
+    historyBtn.addEventListener("click", async () => {
+      const studentId = selectedStudents[0];
+      const allStudents = await ipcRenderer.invoke("get-students");
+      const student = allStudents.find((s) => s.id === studentId);
+      if (student) {
+        await showStudentHistoryModal(studentId, student.name);
+      }
+    });
+    controlsContainer.appendChild(historyBtn);
+
+    const printBtn = document.createElement("button");
+    printBtn.className = "dynamic-btn secondary";
+    printBtn.innerHTML = `
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+        <path d="M6 14h12v8H6z"/>
+      </svg>
+      Print Student ID
+    `;
+    printBtn.addEventListener("click", () => {
+      handlePrint();
+    });
+
+    const removeBtn = document.createElement("button");
+    removeBtn.className = "dynamic-btn danger";
+    removeBtn.innerHTML = `
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+      </svg>
+      Remove Student
+    `;
+    removeBtn.addEventListener("click", () => {
+      handleRemoveStudent();
+    });
+
+    controlsContainer.appendChild(printBtn);
+    controlsContainer.appendChild(removeBtn);
+  } else {
+    const printBtn = document.createElement("button");
+    printBtn.className = "dynamic-btn secondary";
+    printBtn.innerHTML = `
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+        <path d="M6 14h12v8H6z"/>
+      </svg>
+      Print Student IDs (${selectedCount})
+    `;
+    printBtn.addEventListener("click", () => {
+      handlePrint();
+    });
+
+    const removeBtn = document.createElement("button");
+    removeBtn.className = "dynamic-btn danger";
+    removeBtn.innerHTML = `
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+      </svg>
+      Remove Students (${selectedCount})
+    `;
+    removeBtn.addEventListener("click", () => {
+      handleRemoveStudent();
+    });
+
+    controlsContainer.appendChild(printBtn);
+    controlsContainer.appendChild(removeBtn);
+  }
+
+  if (selectedCount > 0) {
+    const addBtn = document.createElement("button");
+    addBtn.className = "dynamic-btn primary";
+    addBtn.innerHTML = `
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 5v14M5 12h14"/>
+      </svg>
+      Add Another Student
+    `;
+    addBtn.addEventListener("click", async () => {
+      const studentName = await showAddStudentModal();
+      if (studentName) {
+        await addStudent(studentName);
+      }
+    });
+    controlsContainer.appendChild(addBtn);
+  }
+}
+
 function setupEventListeners() {
   // Logout button
   appState.logoutBtn.addEventListener("click", async () => {
