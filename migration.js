@@ -25,7 +25,7 @@ export async function migrateOldData() {
     const oldCurrentUserStr = localStorage.getItem("currentUser");
 
     // Try to get data from electron-store via IPC
-    const oldData = await window.electronAPI.getOldData();
+    const oldData = await window.electronAPI.getOldData(user.uid);
 
     if (
       !oldStudentsStr &&

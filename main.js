@@ -1,5 +1,6 @@
 const { app, BrowserWindow, ipcMain } = require("electron");
 const path = require("path");
+const fs = require("fs");
 
 let mainWindow;
 
@@ -28,6 +29,7 @@ ipcMain.on("open-print-preview", (event, html) => {
 // Handle getting old data from electron-store
 ipcMain.handle("get-old-data", async () => {
   try {
+    const { default: Store } = await import("electron-store");
     const store = new Store();
     const students = store.get("students");
     const history = store.get("history");

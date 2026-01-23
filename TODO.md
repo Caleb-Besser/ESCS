@@ -1,25 +1,27 @@
-# Project Cleanup Completed
+# Migration Fix TODO
 
-## Summary
+## Completed
 
-Cleaned up the ESCS project by removing unused/old files:
+- [x] Added missing imports (fs, Store) to main.js
+- [x] Updated preload.js to pass userId to getOldData
+- [x] Updated IPC handler to look for old data in multiple locations:
+  - Default electron-store
+  - Old custom store location (escs-data/user_data.json)
+  - Direct JSON files in userData directory
+  - User-specific data in old store
+- [x] Updated migration.js to pass userId to IPC call
 
-- Removed `renderer.js` (old monolithic renderer file, replaced by modular `js/` files)
-- Removed `src/` folder (unfinished refactoring attempt)
-- Removed `data/` folder (unused, app uses electron-store)
-- Removed `test-results/` folder (playwright test artifacts)
+## Testing Needed
 
-## Current Structure
+- [ ] Test migration with old data in default store location
+- [ ] Test migration with old data in custom store location
+- [ ] Test migration with JSON files directly
+- [ ] Test migration with user-specific data
+- [ ] Verify no data loss during migration
+- [ ] Verify migration only runs once per user
 
-The app now uses the clean modular structure:
+## Notes
 
-- `js/` folder with modular renderer files
-- `main.js` for Electron main process
-- `login.js` for login functionality
-
-All functionality preserved, project is cleaner and more maintainable.
-
-## Recent Updates
-
-- Added debugging to "Your Barcodes" modal to help identify why it wasn't appearing
-- Modal functionality is now working with console logging for troubleshooting
+- Old system stored data as: users.{userId}.students and users.{userId}.history
+- New system migrates to Firestore under users/{userId}/students/{studentId}
+- Migration checks localStorage, electron-store (multiple locations), and JSON files
