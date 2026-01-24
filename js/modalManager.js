@@ -450,14 +450,22 @@ function showCreateBarcodeModal() {
     };
     document.addEventListener("keydown", handleEscape);
 
-    // Handle click outside
     modal.onclick = (e) => {
+      // Only close if clicking directly on the modal overlay (not on content)
       if (e.target === modal) {
         modal.classList.remove("show");
         document.removeEventListener("keydown", handleEscape);
         resolve(null);
       }
     };
+
+    // Also prevent the modal content from closing when clicking inside it
+    const modalContent = modal.querySelector(".modal-content");
+    if (modalContent) {
+      modalContent.addEventListener("click", (e) => {
+        e.stopPropagation(); // Prevent clicks inside content from closing modal
+      });
+    }
   });
 }
 
@@ -490,39 +498,25 @@ function showYourBarcodesModal() {
         </div>
       `;
     } else {
-      // Create barcode cards
+      // Create barcode cards (SIMPLE VERSION - no individual size selectors)
       barcodes.forEach((barcode, index) => {
         const card = document.createElement("div");
         card.className = "barcode-card";
         card.dataset.index = index;
+        card.dataset.isbn = barcode.isbn;
 
         card.innerHTML = `
-          <input type="checkbox" class="barcode-select-checkbox" data-index="${index}">
-          <div class="barcode-svg-container"></div>
-          <div class="barcode-info">
-            <div class="barcode-title">${barcode.title || "Unknown Book"}</div>
-            <div class="barcode-author">${barcode.author || "Unknown Author"}</div>
-            <div class="barcode-meta">
-              <span class="barcode-isbn">ISBN: ${barcode.isbn}</span>
-              <span class="barcode-date">Created: ${new Date(barcode.createdAt).toLocaleDateString()}</span>
-            </div>
-          </div>
-          <div class="barcode-size-selector">
-            <div class="barcode-size-dropdown">
-              <button class="barcode-size-button" data-index="${index}" data-size="medium">
-                Size: Medium
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polyline points="6 9 12 15 18 9"></polyline>
-                </svg>
-              </button>
-              <div class="barcode-size-menu" data-index="${index}">
-                <div class="barcode-size-option" data-size="small">Small (2.5")</div>
-                <div class="barcode-size-option" data-size="medium">Medium (3")</div>
-                <div class="barcode-size-option" data-size="large">Large (3.5")</div>
-              </div>
-            </div>
-          </div>
-        `;
+      <input type="checkbox" class="barcode-select-checkbox" data-index="${index}">
+      <div class="barcode-svg-container"></div>
+      <div class="barcode-info">
+        <div class="barcode-title">${barcode.title || "Unknown Book"}</div>
+        <div class="barcode-author">${barcode.author || "Unknown Author"}</div>
+        <div class="barcode-meta">
+          <span class="barcode-isbn">ISBN: ${barcode.isbn}</span>
+          <span class="barcode-date">Created: ${new Date(barcode.createdAt).toLocaleDateString()}</span>
+        </div>
+      </div>
+    `;
 
         content.appendChild(card);
 
@@ -557,48 +551,72 @@ function showYourBarcodesModal() {
           // Fallback if JsBarcode not loaded
           svgContainer.innerHTML = `<div style="text-align: center; color: #666; font-size: 10px;">${barcode.isbn}</div>`;
         }
+      });
 
-        // Handle size dropdown
-        const sizeButton = card.querySelector(".barcode-size-button");
-        const sizeMenu = card.querySelector(".barcode-size-menu");
+      // Reset state
+      selectAllCheckbox.checked = false;
+      updateActionButtons();
 
-        if (sizeButton && sizeMenu) {
-          sizeButton.addEventListener("click", (e) => {
+      // *** ADD SIZE SELECTOR TO ACTIONS BAR ***
+      // Find the actions container
+      const actionsContainer = document.getElementById("your-barcodes-actions");
+      if (actionsContainer) {
+        // Create and insert the size selector container
+        const sizeSelectorContainer = document.createElement("div");
+        sizeSelectorContainer.className = "size-selector-container";
+        sizeSelectorContainer.innerHTML = `
+      <div class="size-selector" id="size-selector-wrapper">
+        <label for="barcode-size">Label Size:</label>
+        <select id="barcode-size" class="size-select">
+          <option value="small">Small (2.5")</option>
+          <option value="medium" selected>Medium (3")</option>
+          <option value="large">Large (3.5")</option>
+        </select>
+      </div>
+    `;
+
+        // Insert it between the "Select All" and action buttons
+        const selectAllDiv = actionsContainer.querySelector(
+          ".select-all-barcodes",
+        );
+        const actionButtonsDiv = actionsContainer.querySelector(
+          ".barcode-action-buttons",
+        );
+
+        if (selectAllDiv && actionButtonsDiv) {
+          actionsContainer.insertBefore(
+            sizeSelectorContainer,
+            actionButtonsDiv,
+          );
+        }
+
+        // Add event listener to prevent the select from closing the modal
+        const sizeSelect = document.getElementById("barcode-size");
+        const sizeSelectorWrapper = document.getElementById(
+          "size-selector-wrapper",
+        );
+
+        if (sizeSelect) {
+          sizeSelect.addEventListener("click", function (e) {
             e.stopPropagation();
-            // Close all other menus
-            document.querySelectorAll(".barcode-size-menu").forEach((menu) => {
-              if (menu !== sizeMenu) {
-                menu.style.display = "none";
-              }
-            });
-            sizeMenu.style.display =
-              sizeMenu.style.display === "block" ? "none" : "block";
           });
 
-          // Handle size option clicks
-          sizeMenu
-            .querySelectorAll(".barcode-size-option")
-            .forEach((option) => {
-              option.addEventListener("click", (e) => {
-                e.stopPropagation();
-                const newSize = option.dataset.size;
-                const sizeText = option.textContent;
-                sizeButton.innerHTML = `Size: ${sizeText.split(" (")[0]}<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>`;
-                sizeButton.dataset.size = newSize;
-                sizeMenu.style.display = "none";
-              });
-            });
-        }
-      });
+          sizeSelect.addEventListener("mousedown", function (e) {
+            e.stopPropagation();
+          });
 
-      // Close size menus when clicking outside
-      document.addEventListener("click", (e) => {
-        if (!e.target.closest(".barcode-size-dropdown")) {
-          document.querySelectorAll(".barcode-size-menu").forEach((menu) => {
-            menu.style.display = "none";
+          sizeSelect.addEventListener("change", function (e) {
+            e.stopPropagation();
           });
         }
-      });
+
+        if (sizeSelectorWrapper) {
+          sizeSelectorWrapper.addEventListener("click", function (e) {
+            e.stopPropagation();
+          });
+        }
+      }
+      //
     }
 
     // Reset state
@@ -614,8 +632,27 @@ function showYourBarcodesModal() {
     };
 
     document.getElementById("your-barcodes-close-btn").onclick = closeModal;
+
+    // Fix the modal click handler to not close when clicking on select dropdown
     modal.onclick = (e) => {
-      if (e.target === modal) closeModal();
+      // Check if click is on the modal overlay (not the content)
+      // and NOT on the size selector
+      if (e.target === modal) {
+        const sizeSelect = document.getElementById("barcode-size");
+        const sizeSelectorWrapper = document.getElementById(
+          "size-selector-wrapper",
+        );
+
+        // Don't close if clicking near the select dropdown
+        if (
+          !sizeSelect ||
+          !sizeSelectorWrapper ||
+          (!sizeSelect.contains(e.target) &&
+            !sizeSelectorWrapper.contains(e.target))
+        ) {
+          closeModal();
+        }
+      }
     };
 
     // Select all checkbox
@@ -673,43 +710,43 @@ function showYourBarcodesModal() {
 
       if (selectedCheckboxes.length === 0) return;
 
+      // Get selected size from the global selector
+      const sizeSelector = document.getElementById("barcode-size");
+      const selectedSize = sizeSelector ? sizeSelector.value : "medium";
+
       const selectedItems = Array.from(selectedCheckboxes).map((cb) => {
         const index = parseInt(cb.dataset.index);
-        const sizeButton = content.querySelector(
-          `.barcode-size-button[data-index="${index}"]`,
-        );
-        const size = sizeButton ? sizeButton.dataset.size : "medium";
         return {
           barcode: barcodes[index],
-          size: size,
+          size: selectedSize, // Use the global size for all selected barcodes
         };
       });
 
       let html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Print Barcodes</title>
-    <style>
-      * { margin: 0; padding: 0; box-sizing: border-box; }
-      @page { size: letter; margin: 0.5in; }
-      body { font-family: Arial, sans-serif; background: #fff; padding-top: 80px; }
-      .barcodes-container { display: flex; flex-wrap: wrap; gap: 15px; justify-content: flex-start; }
-      .barcode-item { border: 2px dotted #0f766e; border-radius: 8px; padding: 15px; text-align: center; page-break-inside: avoid; background: white; }
-      .barcode-item.small { width: 2.5in; height: 1.5in; padding: 10px; }
-      .barcode-item.medium { width: 3in; height: 2in; padding: 15px; }
-      .barcode-item.large { width: 3.5in; height: 2.5in; padding: 20px; }
-      .barcode-title { font-weight: bold; margin-bottom: 5px; font-size: 12px; color: #0f766e; }
-      .barcode-item.small .barcode-title { font-size: 10px; }
-      .barcode-item.large .barcode-title { font-size: 14px; }
-      .barcode-author { color: #64748b; margin-bottom: 10px; font-size: 10px; }
-      .barcode-item.small .barcode-author { font-size: 8px; }
-      .barcode-item.large .barcode-author { font-size: 12px; }
-      .barcode-svg { max-width: 100%; height: auto; margin-bottom: 5px; }
-      .print-controls { position: fixed; top: 0; left: 0; width: 100%; background: #0f766e; padding: 15px; display: flex; justify-content: flex-end; z-index: 1000; }
-      .print-btn { background: #0d9488; color: white; border: none; padding: 10px 24px; border-radius: 6px; font-weight: bold; cursor: pointer; }
-      .print-btn:hover { background: #0f766e; }
-      @media print { body { padding-top: 0; } .no-print { display: none !important; } }
-    </style>
-    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"><\/script></head><body>
-    <div class="print-controls no-print"><button class="print-btn" onclick="window.print()">Print Barcodes</button></div>
-    <div class="barcodes-container">`;
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    @page { size: letter; margin: 0.5in; }
+    body { font-family: Arial, sans-serif; background: #fff; padding-top: 80px; }
+    .barcodes-container { display: flex; flex-wrap: wrap; gap: 15px; justify-content: flex-start; }
+    .barcode-item { border: 2px dotted #0f766e; border-radius: 8px; padding: 15px; text-align: center; page-break-inside: avoid; background: white; }
+    .barcode-item.small { width: 2.5in; height: 1.5in; padding: 10px; }
+    .barcode-item.medium { width: 3in; height: 2in; padding: 15px; }
+    .barcode-item.large { width: 3.5in; height: 2.5in; padding: 20px; }
+    .barcode-title { font-weight: bold; margin-bottom: 5px; font-size: 12px; color: #0f766e; }
+    .barcode-item.small .barcode-title { font-size: 10px; }
+    .barcode-item.large .barcode-title { font-size: 14px; }
+    .barcode-author { color: #64748b; margin-bottom: 10px; font-size: 10px; }
+    .barcode-item.small .barcode-author { font-size: 8px; }
+    .barcode-item.large .barcode-author { font-size: 12px; }
+    .barcode-svg { max-width: 100%; height: auto; margin-bottom: 5px; }
+    .print-controls { position: fixed; top: 0; left: 0; width: 100%; background: #0f766e; padding: 15px; display: flex; justify-content: flex-end; z-index: 1000; }
+    .print-btn { background: #0d9488; color: white; border: none; padding: 10px 24px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+    .print-btn:hover { background: #0f766e; }
+    @media print { body { padding-top: 0; } .no-print { display: none !important; } }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"><\/script></head><body>
+  <div class="print-controls no-print"><button class="print-btn" onclick="window.print()">Print Barcodes</button></div>
+  <div class="barcodes-container">`;
 
       selectedItems.forEach((item) => {
         const { barcode, size } = item;

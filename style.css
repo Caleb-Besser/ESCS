@@ -1824,3 +1824,200 @@ body {
     margin-top: 5px;
   }
 }
+
+/* ========== BARCODE SIZE SELECTOR STYLES ========== */
+/* Add these styles to the end of your style.css file */
+
+.size-selector-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-right: auto;
+}
+
+.size-selector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.size-selector label {
+  font-size: 14px;
+  color: #475569;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.size-select {
+  padding: 8px 12px;
+  border: 2px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #1e293b;
+  background: white;
+  cursor: pointer;
+  min-width: 120px;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.size-select:focus {
+  border-color: #0d9488;
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.1);
+}
+
+.size-select:hover {
+  border-color: #cbd5e1;
+}
+
+/* Remove old individual size selector styles */
+.barcode-size-selector,
+.barcode-size-dropdown,
+.barcode-size-button,
+.barcode-size-menu,
+.barcode-size-option {
+  display: none !important;
+}
+
+/* Clean up barcode cards - remove bottom padding since size selector is gone */
+.barcode-card {
+  padding: 20px 16px 16px !important;
+}
+
+/* Adjust the actions bar layout */
+.your-barcodes-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 16px;
+}
+
+.select-all-barcodes {
+  margin-right: 0;
+}
+
+.barcode-action-buttons {
+  display: flex;
+  gap: 12px;
+  margin-left: 0;
+}
+
+/* Add to style.css - fix for dropdown selector */
+.size-selector-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-right: auto;
+}
+
+.size-selector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  z-index: 10010; /* Higher than modal */
+}
+
+.size-selector label {
+  font-size: 14px;
+  color: #475569;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.size-select {
+  padding: 8px 12px;
+  border: 2px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #1e293b;
+  background: white;
+  cursor: pointer;
+  min-width: 120px;
+  outline: none;
+  transition: all 0.2s;
+  position: relative;
+  z-index: 10011; /* Even higher */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 16px;
+  padding-right: 32px;
+}
+
+.size-select:focus {
+  border-color: #0d9488;
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.1);
+}
+
+.size-select:hover {
+  border-color: #cbd5e1;
+}
+
+/* Fix for dropdown options z-index */
+.size-select option {
+  background: white;
+  color: #1e293b;
+  padding: 8px;
+}
+
+/* Ensure the select dropdown appears above modal */
+.modal-overlay.show {
+  z-index: 10000;
+}
+
+.your-barcodes-modal-content {
+  z-index: 10001;
+}
+
+.size-select:focus-within,
+.size-select:active {
+  z-index: 10012 !important;
+}
+
+/* Remove old individual size selector styles */
+.barcode-size-selector,
+.barcode-size-dropdown,
+.barcode-size-button,
+.barcode-size-menu,
+.barcode-size-option {
+  display: none !important;
+}
+
+/* Clean up barcode cards - remove bottom padding since size selector is gone */
+.barcode-card {
+  padding: 20px 16px 16px !important;
+}
+
+/* Adjust the actions bar layout */
+.your-barcodes-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 16px;
+}
+
+.select-all-barcodes {
+  margin-right: 0;
+}
+
+.barcode-action-buttons {
+  display: flex;
+  gap: 12px;
+  margin-left: 0;
+}
+
+/* Important: Prevent the select dropdown from closing the modal */
+.size-selector * {
+  pointer-events: auto !important;
+}
+
+/* This ensures the dropdown options can be clicked */
+.size-select option {
+  pointer-events: auto;
+}
