@@ -1,4 +1,4 @@
-// app.js - Updated with proper imports
+// app.js - Updated with new sidebar structure
 import {
   onAuthStateChanged,
   signOut,
@@ -9,6 +9,9 @@ import {
   removeStudents as firebaseRemoveStudents,
   updateStudentBooks as firebaseUpdateStudentBooks,
   getStudentHistory as firebaseGetStudentHistory,
+  getCustomBarcodes,
+  saveCustomBarcode,
+  syncLocalBarcodesToFirebase,
 } from "../firebaseDB.js";
 import { migrateOldData } from "../migration.js";
 import { auth, db } from "../firebase.js";
@@ -40,7 +43,61 @@ window.appState = {
   dynamicControls: null,
   currentSort: "name",
   allStudents: [], // Add this to store all students
+  customBarcodes: [], // Store custom barcodes from Firebase
 };
+
+// Function to update the selected student display in the top bar
+function updateSelectedStudentDisplay() {
+  const displayElement = document.getElementById("selected-student-display");
+  const booksHeaderEl = document.getElementById("books-header");
+
+  const selectedCount = appState.selectedStudents.length;
+
+  if (selectedCount === 0) {
+    // No student selected
+    if (displayElement) {
+      displayElement.textContent = "Select or scan a student";
+      displayElement.style.color = "rgba(255, 255, 255, 0.7)";
+      displayElement.style.fontStyle = "italic";
+    }
+    if (booksHeaderEl) {
+      booksHeaderEl.textContent = ""; // Clear books header
+    }
+  } else if (selectedCount === 1) {
+    // One student selected
+    const studentId = appState.selectedStudents[0];
+    const student = appState.allStudents.find((s) => s.id === studentId);
+    if (student) {
+      if (displayElement) {
+        displayElement.textContent = `${student.name}'s Books`;
+        displayElement.style.color = "rgba(255, 255, 255, 0.95)";
+        displayElement.style.fontStyle = "normal";
+      }
+      if (booksHeaderEl) {
+        booksHeaderEl.textContent = ""; // Clear books header since it's now in top bar
+      }
+    } else {
+      if (displayElement) {
+        displayElement.textContent = "Student not found";
+        displayElement.style.color = "rgba(255, 255, 255, 0.7)";
+        displayElement.style.fontStyle = "italic";
+      }
+      if (booksHeaderEl) {
+        booksHeaderEl.textContent = "Student not found";
+      }
+    }
+  } else {
+    // Multiple students selected
+    if (displayElement) {
+      displayElement.textContent = `${selectedCount} students selected`;
+      displayElement.style.color = "rgba(255, 255, 255, 0.95)";
+      displayElement.style.fontStyle = "normal";
+    }
+    if (booksHeaderEl) {
+      booksHeaderEl.textContent = `${selectedCount} Students Selected`;
+    }
+  }
+}
 
 // Function to add student (moved here to avoid circular dependencies)
 async function addStudentDirect(name) {
@@ -54,6 +111,7 @@ async function addStudentDirect(name) {
     sortedStudents.forEach(addStudentToList);
     renderSelectedBooks();
     updateDynamicControls(0);
+    updateSelectedStudentDisplay();
     setTimeout(focusBarcodeInput, 500);
     showToast("Student added successfully", "#10b981");
   } catch (error) {
@@ -85,6 +143,7 @@ async function removeStudentsDirect() {
     sortedStudents.forEach(addStudentToList);
     renderSelectedBooks();
     updateDynamicControls(0);
+    updateSelectedStudentDisplay();
     setTimeout(focusBarcodeInput, 500);
     showToast("Students removed successfully", "#10b981");
   } catch (error) {
@@ -92,7 +151,7 @@ async function removeStudentsDirect() {
   }
 }
 
-// app.js - Updated printStudents function with larger barcodes
+// app.js - Updated printStudents function with medium barcode size
 async function printStudents() {
   if (!appState.selectedStudents.length) {
     showToast("Select at least one student.", "#ef4444");
@@ -107,7 +166,7 @@ async function printStudents() {
     console.log("Printing students:", studentsToPrint);
     showToast(`Preparing to print ${studentsToPrint.length} ID(s)`, "#3b82f6");
 
-    // Create print HTML - ID card layout
+    // Create print HTML - ID card layout with medium barcode size (3")
     let html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Print Student IDs</title>
       <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -145,7 +204,7 @@ async function printStudents() {
         .student-name {
           font-size: 18px;
           font-weight: bold;
-          margin-bottom: 10px;
+          margin-bottom: 8px;
           color: #000;
           text-align: center;
           width: 100%;
@@ -241,17 +300,17 @@ async function printStudents() {
     }
 
     html += `</div><script>
-      // Generate barcodes for all student cards
+      // Generate barcodes for all student cards with MEDIUM size (3")
       document.querySelectorAll('.student-barcode').forEach(svg => {
         const studentId = svg.getAttribute('data-id');
         try {
           JsBarcode(svg, studentId, {
             format: 'CODE128',
-            displayValue: false, // Hide the text under barcode
-            height: 50, // Increased from 30
-            width: 1.5, // Increased from 1.2
-            fontSize: 0,
-            margin: 0, // Changed from 5 to 0 for more space
+            displayValue: true, // Show the text under barcode (like medium size)
+            height: 45, // Medium size height (same as medium book barcodes)
+            width: 2, // Medium size width
+            fontSize: 14, // Medium size font
+            margin: 5, // Medium size margin
             background: 'transparent',
             lineColor: '#000000'
           });
@@ -428,6 +487,19 @@ window.onload = async () => {
       showToast("Old data migrated successfully! 🎉", "#10b981");
     }
 
+    // Sync local barcodes to Firebase
+    console.log("Syncing local barcodes to Firebase...");
+    const syncResult = await syncLocalBarcodesToFirebase();
+    if (syncResult.synced > 0) {
+      showToast(
+        `Migrated ${syncResult.synced} local barcode(s) to cloud`,
+        "#3b82f6",
+      );
+    }
+
+    // Load custom barcodes from Firebase
+    appState.customBarcodes = await getCustomBarcodes();
+
     // Initialize DOM elements
     appState.studentsContainer = document.getElementById("students");
     appState.selectedBooksContainer = document.getElementById(
@@ -436,11 +508,13 @@ window.onload = async () => {
     appState.booksHeaderEl = document.getElementById("books-header");
     appState.logoutBtn = document.getElementById("logout-btn");
     appState.selectAllCheckbox = document.getElementById("select-all-checkbox");
-    appState.sortButton = document.getElementById("sort-button");
+    appState.selectAllHeaderBtn = document.getElementById(
+      "select-all-header-btn",
+    );
+    appState.sortHeaderBtn = document.getElementById("sort-header-btn");
     appState.sortMenu = document.getElementById("sort-menu");
     appState.barcodeButton = document.getElementById("barcode-button");
     appState.barcodeMenu = document.getElementById("barcode-menu");
-    appState.stateIndicator = document.getElementById("state-indicator");
     appState.dynamicControls = document.getElementById("dynamic-controls");
 
     if (!appState.studentsContainer) return;
@@ -466,16 +540,19 @@ window.onload = async () => {
     }
     renderSelectedBooks();
     updateDynamicControls(0);
+    updateSelectedStudentDisplay(); // Initialize the selected student display
 
     // Set initial sort option as active
     document
       .querySelector(`.sort-option[data-sort="${appState.currentSort}"]`)
       ?.classList.add("active");
 
-    document.body.classList.add("barcode-scanner-ready");
+    // REMOVED: No longer adding the barcode scanner ready class
+    // document.body.classList.add("barcode-scanner-ready");
 
     // Focus barcode input whenever student selection changes
     window.addEventListener("studentSelectionChanged", () => {
+      updateSelectedStudentDisplay();
       setTimeout(focusBarcodeInput, 100);
     });
   } catch (error) {
@@ -513,12 +590,44 @@ function setupEventListeners() {
     }
   });
 
-  // Sort button and menu
-  appState.sortButton.addEventListener("click", (e) => {
+  // NEW: Select All Header Button (handles the whole left side click)
+  appState.selectAllHeaderBtn.addEventListener("click", (e) => {
+    // Don't trigger if clicking directly on the checkbox
+    if (e.target.type === "checkbox") return;
+
+    const selectAllCheckbox = appState.selectAllCheckbox;
+    selectAllCheckbox.checked = !selectAllCheckbox.checked;
+
+    // Trigger the change event
+    const event = new Event("change");
+    selectAllCheckbox.dispatchEvent(event);
+  });
+
+  // Select All Logic (checkbox)
+  appState.selectAllCheckbox.addEventListener("change", async (e) => {
+    if (e.target.checked) {
+      appState.selectedStudents = appState.allStudents.map((s) => s.id);
+    } else {
+      appState.selectedStudents = [];
+    }
+
+    // Update UI
+    document.querySelectorAll(".student-card").forEach((card) => {
+      card.classList.toggle("selected", e.target.checked);
+    });
+
+    renderSelectedBooks();
+    updateDynamicControls(appState.selectedStudents.length);
+    updateSelectedStudentDisplay();
+  });
+
+  // NEW: Sort Header Button
+  appState.sortHeaderBtn.addEventListener("click", (e) => {
     e.stopPropagation();
     appState.sortMenu.classList.toggle("show");
   });
 
+  // Close menus when clicking elsewhere
   document.addEventListener("click", () => {
     appState.sortMenu.classList.remove("show");
     appState.barcodeMenu.classList.remove("show");
@@ -528,6 +637,7 @@ function setupEventListeners() {
     e.stopPropagation();
   });
 
+  // Sort options
   document.querySelectorAll(".sort-option").forEach((option) => {
     option.addEventListener("click", async () => {
       appState.currentSort = option.dataset.sort;
@@ -569,23 +679,6 @@ function setupEventListeners() {
       }
     });
   });
-
-  // Select All Logic
-  appState.selectAllCheckbox.addEventListener("change", async (e) => {
-    if (e.target.checked) {
-      appState.selectedStudents = appState.allStudents.map((s) => s.id);
-    } else {
-      appState.selectedStudents = [];
-    }
-
-    // Update UI
-    document.querySelectorAll(".student-card").forEach((card) => {
-      card.classList.toggle("selected", e.target.checked);
-    });
-
-    renderSelectedBooks();
-    updateDynamicControls(appState.selectedStudents.length);
-  });
 }
 
 // Export functions needed by other modules
@@ -596,4 +689,5 @@ export {
   firebaseUpdateStudentBooks as updateStudentBooks,
   firebaseGetStudentHistory as getStudentHistory,
   addStudentDirect as addStudentGlobal,
+  updateSelectedStudentDisplay,
 };

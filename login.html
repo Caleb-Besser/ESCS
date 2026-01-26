@@ -37,15 +37,19 @@
         margin-bottom: 32px;
       }
 
-      .login-header h1 {
-        color: #0f766e;
-        font-size: 28px;
-        margin-bottom: 8px;
+      .app-logo {
+        width: 180px;
+        height: 180px;
+        object-fit: contain;
+        margin: 0 auto 16px;
+        display: block;
+        border-radius: 8px;
       }
 
       .login-header p {
         color: #64748b;
         font-size: 14px;
+        margin-top: 8px;
       }
 
       .form-group {
@@ -177,8 +181,8 @@
   <body>
     <div class="login-container">
       <div class="login-header">
-        <h1>ESCS</h1>
-        <p>Easy Student Checkout System</p>
+        <img src="project_icon.png" alt="ESCS Logo" class="app-logo" />
+        <!-- Removed the ESCS text since it's in the logo -->
       </div>
 
       <!-- Login Form -->

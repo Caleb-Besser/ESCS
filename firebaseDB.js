@@ -11,6 +11,7 @@ import {
   where,
   arrayUnion,
   orderBy,
+  addDoc,
 } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
 
 // Helper to get current user
@@ -157,6 +158,7 @@ export async function getStudentHistory(studentId) {
     return [];
   }
 }
+
 // Add to firebaseDB.js
 export async function addToHistory(
   studentId,
@@ -191,5 +193,169 @@ export async function addToHistory(
   } catch (error) {
     console.error("Error adding to history:", error);
     return false;
+  }
+}
+
+// ========== CUSTOM BARCODES ==========
+export async function getCustomBarcodes() {
+  try {
+    const userId = getCurrentUserId();
+    if (!userId) return [];
+
+    const barcodesRef = collection(db, `users/${userId}/barcodes`);
+    const snapshot = await getDocs(barcodesRef);
+    const barcodes = [];
+
+    snapshot.forEach((doc) => {
+      const data = doc.data();
+      barcodes.push({
+        id: doc.id,
+        ...data,
+        // Ensure all required fields exist
+        title: data.title || "Unknown Book",
+        author: data.author || "Unknown Author",
+        cover: data.cover || "",
+      });
+    });
+
+    return barcodes.sort(
+      (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
+    );
+  } catch (error) {
+    console.error("Error fetching custom barcodes:", error);
+    return [];
+  }
+}
+
+export async function saveCustomBarcode(barcodeData) {
+  try {
+    const userId = getCurrentUserId();
+    if (!userId) throw new Error("No user logged in");
+
+    const barcodesRef = collection(db, `users/${userId}/barcodes`);
+
+    // Check if barcode already exists
+    const existingBarcodes = await getCustomBarcodes();
+    const exists = existingBarcodes.some((b) => b.isbn === barcodeData.isbn);
+
+    if (exists) {
+      throw new Error("Barcode already exists");
+    }
+
+    const barcodeDoc = {
+      isbn: barcodeData.isbn,
+      title: barcodeData.title || "Unknown Book",
+      author: barcodeData.author || "Unknown Author",
+      cover: barcodeData.cover || "",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    const docRef = await addDoc(barcodesRef, barcodeDoc);
+
+    // Update app state
+    if (window.appState) {
+      window.appState.customBarcodes = await getCustomBarcodes();
+    }
+
+    return { ...barcodeDoc, id: docRef.id };
+  } catch (error) {
+    console.error("Error saving custom barcode:", error);
+    throw error;
+  }
+}
+
+export async function deleteCustomBarcode(barcodeId) {
+  try {
+    const userId = getCurrentUserId();
+    if (!userId) throw new Error("No user logged in");
+
+    const barcodeRef = doc(db, `users/${userId}/barcodes/${barcodeId}`);
+    await deleteDoc(barcodeRef);
+
+    // Update app state
+    if (window.appState) {
+      window.appState.customBarcodes = await getCustomBarcodes();
+    }
+
+    return true;
+  } catch (error) {
+    console.error("Error deleting custom barcode:", error);
+    throw error;
+  }
+}
+
+export async function deleteCustomBarcodes(barcodeIds) {
+  try {
+    const userId = getCurrentUserId();
+    if (!userId) throw new Error("No user logged in");
+
+    for (const barcodeId of barcodeIds) {
+      const barcodeRef = doc(db, `users/${userId}/barcodes/${barcodeId}`);
+      await deleteDoc(barcodeRef);
+    }
+
+    // Update app state
+    if (window.appState) {
+      window.appState.customBarcodes = await getCustomBarcodes();
+    }
+
+    return true;
+  } catch (error) {
+    console.error("Error deleting custom barcodes:", error);
+    throw error;
+  }
+}
+
+export async function syncLocalBarcodesToFirebase() {
+  try {
+    const userId = getCurrentUserId();
+    if (!userId) {
+      return { synced: 0, error: "No user logged in" };
+    }
+
+    // Get local barcodes from localStorage
+    const localBarcodes = JSON.parse(
+      localStorage.getItem("createdBarcodes") || "[]",
+    );
+
+    if (localBarcodes.length === 0) {
+      return { synced: 0, message: "No local barcodes to sync" };
+    }
+
+    // Get existing Firebase barcodes
+    const firebaseBarcodes = await getCustomBarcodes();
+    const firebaseIsbns = firebaseBarcodes.map((b) => b.isbn);
+
+    let syncedCount = 0;
+    const errors = [];
+
+    // Sync each local barcode that doesn't exist in Firebase
+    for (const localBarcode of localBarcodes) {
+      if (!firebaseIsbns.includes(localBarcode.isbn)) {
+        try {
+          await saveCustomBarcode(localBarcode);
+          syncedCount++;
+        } catch (error) {
+          console.error(`Error syncing barcode ${localBarcode.isbn}:`, error);
+          errors.push(localBarcode.isbn);
+        }
+      }
+    }
+
+    // If all synced successfully, clear local storage
+    if (syncedCount > 0 && errors.length === 0) {
+      localStorage.removeItem("createdBarcodes");
+      console.log(`Successfully synced ${syncedCount} barcode(s) to Firebase`);
+    }
+
+    return {
+      synced: syncedCount,
+      errors: errors,
+      message: `Synced ${syncedCount} barcode(s) to Firebase`,
+    };
+  } catch (error) {
+    console.error("Error syncing local barcodes to Firebase:", error);
+    return { synced: 0, error: error.message };
   }
 }

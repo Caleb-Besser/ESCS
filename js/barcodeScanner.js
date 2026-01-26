@@ -70,6 +70,7 @@ function setupBarcodeScanner() {
         const {
           showConfirm,
           showToast,
+          showActionToast,
           addStudentToList,
           sortStudents,
           renderSelectedBooks,
@@ -92,8 +93,25 @@ function setupBarcodeScanner() {
           if (card) {
             card.classList.add("selected");
             appState.selectedStudents = [scanned];
-            renderSelectedBooks();
+
+            // FIX: Update the student selection and top bar display
+            // First, trigger the student selection update
+            const event = new CustomEvent("studentSelectionChanged", {
+              detail: { selectedCount: 1 },
+            });
+            window.dispatchEvent(event);
+
+            // Update dynamic controls
             updateDynamicControls(1);
+
+            // Update selected books display
+            renderSelectedBooks();
+
+            // FIX: IMPORT AND CALL updateSelectedStudentDisplay
+            const { updateSelectedStudentDisplay } = await import("./app.js");
+            updateSelectedStudentDisplay();
+
+            // Scroll and show toast
             card.scrollIntoView({ behavior: "smooth", block: "nearest" });
             showToast(`✓ Selected: ${scannedStudent.name}`, "#10b981");
           }
@@ -124,7 +142,7 @@ function setupBarcodeScanner() {
         // Check if book is already checked out
         const existingBook = student.books?.find((b) => b.isbn === scanned);
 
-        // barcodeScanner.js - Update check-in section
+        // Check in section
         if (existingBook) {
           // Book check-in
           const confirmCheckin = await showConfirm(
@@ -149,31 +167,135 @@ function setupBarcodeScanner() {
             );
           }
         } else {
-          // Book check-out
+          // Book check-out - UPDATED VERSION
           showToast("Fetching book info...", "#3b82f6");
           let title = "Unknown Book";
           let author = "Unknown Author";
           let cover = "";
 
-          try {
-            const response = await fetch(
-              `https://openlibrary.org/api/books?bibkeys=ISBN:${scanned}&format=json&jscmd=data`,
-              { timeout: 5000 },
-            );
-            if (response.ok) {
-              const data = await response.json();
-              const bookKey = `ISBN:${scanned}`;
+          // First, check if this is in our custom barcodes (from Firebase)
+          const customBarcodes = appState.customBarcodes || [];
+          const customBook = customBarcodes.find((b) => b.isbn === scanned);
 
-              if (data[bookKey]) {
-                title = data[bookKey].title || title;
-                author = data[bookKey].authors
-                  ? data[bookKey].authors[0].name
-                  : author;
-                cover = data[bookKey].cover ? data[bookKey].cover.medium : "";
+          if (customBook) {
+            // Found in custom barcodes
+            title = customBook.title || "Unknown Book";
+            author = customBook.author || "Unknown Author";
+            cover = customBook.cover || "";
+            showToast(`Found in library: ${title}`, "#10b981");
+          } else {
+            // Check local storage as fallback (for backward compatibility)
+            const localBarcodes = JSON.parse(
+              localStorage.getItem("createdBarcodes") || "[]",
+            );
+            const localBook = localBarcodes.find((b) => b.isbn === scanned);
+
+            if (localBook) {
+              // Found in local storage
+              title = localBook.title || "Unknown Book";
+              author = localBook.author || "Unknown Author";
+              cover = localBook.cover || "";
+              showToast(`Found in local library: ${title}`, "#10b981");
+            } else {
+              // Not found locally, try Open Library API
+              try {
+                const response = await fetch(
+                  `https://openlibrary.org/api/books?bibkeys=ISBN:${scanned}&format=json&jscmd=data`,
+                  { timeout: 5000 },
+                );
+                if (response.ok) {
+                  const data = await response.json();
+                  const bookKey = `ISBN:${scanned}`;
+
+                  if (data[bookKey]) {
+                    title = data[bookKey].title || title;
+                    author = data[bookKey].authors
+                      ? data[bookKey].authors[0].name
+                      : author;
+                    cover = data[bookKey].cover
+                      ? data[bookKey].cover.medium
+                      : "";
+                  } else {
+                    // Not found in Open Library either - show action toast
+                    showActionToast(
+                      `Book with ISBN ${scanned} not found.`,
+                      "#f59e0b",
+                      "Add Book",
+                      async () => {
+                        // Import modal function
+                        const { showCreateBarcodeModal } =
+                          await import("./modalManager.js");
+
+                        // Open the create barcode modal with ISBN pre-filled
+                        const modal = document.getElementById(
+                          "create-barcode-modal",
+                        );
+                        const isbnInput = document.getElementById("isbn-input");
+
+                        if (modal && isbnInput) {
+                          isbnInput.value = scanned;
+                          modal.classList.add("show");
+
+                          // Set focus to ISBN input
+                          setTimeout(() => {
+                            isbnInput.focus();
+                          }, 100);
+                        } else {
+                          // Fallback: open regular modal
+                          await showCreateBarcodeModal();
+                        }
+                      },
+                    );
+
+                    appState.barcodeInput.value = "";
+                    setTimeout(() => {
+                      focusBarcodeInput();
+                      isProcessingScan = false;
+                    }, 100);
+                    return;
+                  }
+                } else {
+                  // API error - show action toast
+                  showActionToast(
+                    "Could not fetch book information.",
+                    "#ef4444",
+                    "Add Manually",
+                    async () => {
+                      const { showCreateBarcodeModal } =
+                        await import("./modalManager.js");
+                      await showCreateBarcodeModal();
+                    },
+                  );
+
+                  appState.barcodeInput.value = "";
+                  setTimeout(() => {
+                    focusBarcodeInput();
+                    isProcessingScan = false;
+                  }, 100);
+                  return;
+                }
+              } catch (err) {
+                console.error("API Error:", err);
+                // Network error - show action toast
+                showActionToast(
+                  "Network error. Book not found.",
+                  "#ef4444",
+                  "Add Book",
+                  async () => {
+                    const { showCreateBarcodeModal } =
+                      await import("./modalManager.js");
+                    await showCreateBarcodeModal();
+                  },
+                );
+
+                appState.barcodeInput.value = "";
+                setTimeout(() => {
+                  focusBarcodeInput();
+                  isProcessingScan = false;
+                }, 100);
+                return;
               }
             }
-          } catch (err) {
-            console.error("API Error:", err);
           }
 
           const newBook = {
@@ -205,6 +327,10 @@ function setupBarcodeScanner() {
         if (activeCard) {
           activeCard.classList.add("selected");
           appState.selectedStudents = [studentId];
+
+          // FIX: Update the top bar display after book checkin/checkout
+          const { updateSelectedStudentDisplay } = await import("./app.js");
+          updateSelectedStudentDisplay();
         }
 
         renderSelectedBooks();

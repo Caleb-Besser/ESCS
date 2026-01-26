@@ -120,12 +120,18 @@ function renderSelectedBooks() {
 
   const selectedCount = appState.selectedStudents.length;
 
+  // UPDATED: Always clear the books header - we're not using it anymore
+  appState.booksHeaderEl.textContent = "";
+  appState.booksHeaderEl.style.display = "none";
+
   if (selectedCount === 0) {
-    appState.booksHeaderEl.textContent = "Select a student to view their books";
+    // UPDATED: No student selected - just show empty state without the "Select a student" text
     appState.selectedBooksContainer.innerHTML = "";
-    appState.selectedBooksContainer.style.display = "flex"; // Changed
-    appState.selectedBooksContainer.style.justifyContent = "center"; // Changed
-    appState.selectedBooksContainer.style.alignItems = "center"; // Changed
+    appState.selectedBooksContainer.style.display = "flex";
+    appState.selectedBooksContainer.style.justifyContent = "center";
+    appState.selectedBooksContainer.style.alignItems = "center";
+    appState.selectedBooksContainer.style.width = "100%";
+    appState.selectedBooksContainer.style.height = "100%";
     return;
   }
 
@@ -135,21 +141,20 @@ function renderSelectedBooks() {
     const student = appState.allStudents.find((s) => s.id === studentId);
 
     if (!student) {
-      appState.booksHeaderEl.textContent = "Student not found";
+      // Student not found
       appState.selectedBooksContainer.innerHTML = "";
-      appState.selectedBooksContainer.style.display = "flex"; // Changed
-      appState.selectedBooksContainer.style.justifyContent = "center"; // Changed
-      appState.selectedBooksContainer.style.alignItems = "center"; // Changed
+      appState.selectedBooksContainer.style.display = "flex";
+      appState.selectedBooksContainer.style.justifyContent = "center";
+      appState.selectedBooksContainer.style.alignItems = "center";
+      appState.selectedBooksContainer.style.width = "100%";
       return;
     }
-
-    appState.booksHeaderEl.textContent = `Books for ${student.name}`;
 
     const bookCount = student.books ? student.books.length : 0;
     if (bookCount === 0) {
       // Create a centered container for the no-books message
       appState.selectedBooksContainer.innerHTML = "";
-      appState.selectedBooksContainer.style.display = "flex"; // Changed to flex
+      appState.selectedBooksContainer.style.display = "flex";
       appState.selectedBooksContainer.style.justifyContent = "center";
       appState.selectedBooksContainer.style.alignItems = "center";
       appState.selectedBooksContainer.style.width = "100%";
@@ -169,7 +174,7 @@ function renderSelectedBooks() {
     } else {
       // Show books in grid
       appState.selectedBooksContainer.innerHTML = "";
-      appState.selectedBooksContainer.style.display = "grid"; // Keep as grid for books
+      appState.selectedBooksContainer.style.display = "grid";
       appState.selectedBooksContainer.style.gridTemplateColumns =
         "repeat(auto-fill, minmax(320px, 1fr))";
       appState.selectedBooksContainer.style.gap = "16px";
@@ -205,11 +210,9 @@ function renderSelectedBooks() {
     }
   } else {
     // Multiple students selected
-    appState.booksHeaderEl.textContent = `${selectedCount} Students Selected`;
-
     // Clear the books area or show a multi-selection message
     appState.selectedBooksContainer.innerHTML = "";
-    appState.selectedBooksContainer.style.display = "flex"; // Changed to flex
+    appState.selectedBooksContainer.style.display = "flex";
     appState.selectedBooksContainer.style.justifyContent = "center";
     appState.selectedBooksContainer.style.alignItems = "center";
     appState.selectedBooksContainer.style.width = "100%";
@@ -237,6 +240,34 @@ function showToast(message, color = "#10b981") {
   setTimeout(() => toast.remove(), 3000);
 }
 
+// NEW: Action toast with button
+function showActionToast(
+  message,
+  color = "#10b981",
+  actionText = null,
+  actionCallback = null,
+) {
+  const toast = document.createElement("div");
+  toast.style.cssText = `position: fixed; top: 20px; right: 20px; background: ${color}; color: white; padding: 12px 16px; border-radius: 8px; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 1000; display: flex; align-items: center; gap: 12px;`;
+
+  toast.innerHTML = `
+    <span>${message}</span>
+    ${actionText ? `<button style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 12px;">${actionText}</button>` : ""}
+  `;
+
+  document.body.appendChild(toast);
+
+  if (actionText && actionCallback) {
+    const actionBtn = toast.querySelector("button");
+    actionBtn.addEventListener("click", () => {
+      actionCallback();
+      toast.remove();
+    });
+  }
+
+  setTimeout(() => toast.remove(), 5000);
+}
+
 function showConfirm(title, message, isDanger = false) {
   return new Promise((resolve) => {
     const modal = document.getElementById("confirm-modal");
@@ -261,5 +292,6 @@ export {
   sortStudents,
   renderSelectedBooks,
   showToast,
+  showActionToast, // Export the new function
   showConfirm,
 };
