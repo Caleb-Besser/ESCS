@@ -79,11 +79,11 @@ window.appState = {
   booksHeaderEl: null,
   logoutBtn: null,
   selectAllCheckbox: null,
-  sortButton: null,
+  selectAllHeaderBtn: null,
+  sortHeaderBtn: null,
   sortMenu: null,
   barcodeButton: null,
   barcodeMenu: null,
-  stateIndicator: null,
   dynamicControls: null,
   barcodeInput: null,
 };

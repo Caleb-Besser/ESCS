@@ -19,146 +19,109 @@
   </head>
 
   <body>
-    <!-- Sidebar - Always visible -->
-    <div class="sidebar" id="main-sidebar">
-      <!-- Remove toggle button from here -->
-      <div class="select-all-row">
-        <label class="select-all-label">
-          <input type="checkbox" id="select-all-checkbox" />
-          <span>Select All Students</span>
-        </label>
-        <div class="sort-dropdown">
-          <button class="sort-button" id="sort-button">
+    <!-- Unified Top Bar -->
+    <div class="unified-top-bar">
+      <!-- Sidebar Section (Left) -->
+      <div class="top-bar-sidebar-section">
+        <!-- App Logo and Title - UPDATED: Removed ESCS text -->
+        <div class="app-header">
+          <img src="project_icon.png" alt="ESCS Icon" class="app-icon" />
+        </div>
+      </div>
+
+      <!-- Center Section - Now with selected student display -->
+      <div class="top-bar-center-section">
+        <div class="selected-student-display" id="selected-student-display">
+          <!-- Selected student display will be inserted here -->
+        </div>
+      </div>
+
+      <!-- Right Section -->
+      <div class="top-bar-right-section">
+        <div class="barcode-dropdown">
+          <button
+            class="barcode-button"
+            id="barcode-button"
+            title="Barcode Options"
+          >
             <svg
-              width="16"
-              height="16"
+              width="24"
+              height="24"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
               stroke-width="2"
             >
-              <line x1="4" y1="6" x2="16" y2="6"></line>
-              <line x1="4" y1="12" x2="13" y2="12"></line>
-              <line x1="4" y1="18" x2="10" y2="18"></line>
+              <path d="M2 7h20M6 7v10M10 7v10M14 7v10M18 7v10"></path>
             </svg>
           </button>
-          <div class="sort-menu" id="sort-menu">
-            <div class="sort-option" data-sort="name-asc">
+          <div class="barcode-menu" id="barcode-menu">
+            <div class="barcode-option" data-action="create">
               <svg
-                width="14"
-                height="14"
+                width="16"
+                height="16"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
                 stroke-width="2"
               >
-                <path d="M3 6h18M7 12h10M11 18h6"></path>
+                <path d="M12 5v14M5 12h14" />
               </svg>
-              Name (A-Z)
+              Create Barcode
             </div>
-            <div class="sort-option" data-sort="name-desc">
+            <div class="barcode-option" data-action="your-barcodes">
               <svg
-                width="14"
-                height="14"
+                width="16"
+                height="16"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
                 stroke-width="2"
               >
-                <path d="M11 6h6M7 12h10M3 18h18"></path>
+                <path d="M2 7h20M6 7v10M10 7v10M14 7v10M18 7v10"></path>
               </svg>
-              Name (Z-A)
-            </div>
-            <div class="sort-option" data-sort="books-desc">
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-                <path
-                  d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"
-                ></path>
-              </svg>
-              Most Books
-            </div>
-            <div class="sort-option" data-sort="books-asc">
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-                <path
-                  d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"
-                ></path>
-              </svg>
-              Least Books
-            </div>
-            <div class="sort-option" data-sort="id-asc">
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <path
-                  d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"
-                ></path>
-              </svg>
-              ID (Low-High)
-            </div>
-            <div class="sort-option" data-sort="id-desc">
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <path
-                  d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"
-                ></path>
-              </svg>
-              ID (High-Low)
+              Your Barcodes
             </div>
           </div>
         </div>
+        <button id="logout-btn" class="logout-button" title="Logout">
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
+        </button>
       </div>
-
-      <div class="student-list" id="students"></div>
     </div>
 
-    <!-- Main Content -->
-    <div class="main-content">
-      <!-- Top Bar -->
-      <div class="top-bar">
-        <div class="app-header">
-          <img src="project_icon.png" alt="ESCS Icon" class="app-icon" />
-          <span class="app-name">ESCS</span>
-        </div>
+    <!-- Main Layout Container -->
+    <div class="main-layout-container">
+      <!-- Sidebar -->
+      <div class="sidebar" id="main-sidebar">
+        <!-- Student List Container -->
+        <div class="student-list-container">
+          <!-- Student List Header -->
+          <div class="student-list-header">
+            <!-- Select All Button -->
+            <button class="select-all-header-btn" id="select-all-header-btn">
+              <div class="select-all-label-inner">
+                <input type="checkbox" id="select-all-checkbox" />
+                <span>Select All Students</span>
+              </div>
+            </button>
 
-        <div class="center-content">
-          <div class="state-indicator" id="state-indicator"></div>
-          <div class="barcode-input-container"></div>
-        </div>
+            <!-- Divider -->
+            <div class="header-divider"></div>
 
-        <div class="top-right">
-          <div class="barcode-dropdown">
-            <button
-              class="barcode-button"
-              id="barcode-button"
-              title="Barcode Options"
-            >
+            <!-- Sort Button -->
+            <button class="sort-header-btn" id="sort-header-btn">
               <svg
                 width="20"
                 height="20"
@@ -167,48 +130,91 @@
                 stroke="currentColor"
                 stroke-width="2"
               >
-                <path d="M2 7h20M6 7v10M10 7v10M14 7v10M18 7v10"></path>
+                <line x1="4" y1="6" x2="16" y2="6"></line>
+                <line x1="4" y1="12" x2="13" y2="12"></line>
+                <line x1="4" y1="18" x2="10" y2="18"></line>
               </svg>
             </button>
-            <div class="barcode-menu" id="barcode-menu">
-              <div class="barcode-option" data-action="create">
-                Create Barcode
+
+            <!-- Sort Menu -->
+            <div class="sort-menu" id="sort-menu">
+              <div class="sort-option" data-sort="name-asc">
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path d="M3 6h18M7 12h10M11 18h6"></path>
+                </svg>
+                Name (A-Z)
               </div>
-              <div class="barcode-option" data-action="your-barcodes">
-                Your Barcodes
+              <div class="sort-option" data-sort="name-desc">
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path d="M11 6h6M7 12h10M3 18h18"></path>
+                </svg>
+                Name (Z-A)
+              </div>
+              <div class="sort-option" data-sort="books-desc">
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                  <path
+                    d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"
+                  ></path>
+                </svg>
+                Most Books
+              </div>
+              <div class="sort-option" data-sort="books-asc">
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                  <path
+                    d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"
+                  ></path>
+                </svg>
+                Least Books
               </div>
             </div>
           </div>
-          <button id="logout-btn" class="logout-button" title="Logout">
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-              <polyline points="16 17 21 12 16 7"></polyline>
-              <line x1="21" y1="12" x2="9" y2="12"></line>
-            </svg>
-          </button>
+
+          <!-- Student List -->
+          <div class="student-list" id="students"></div>
         </div>
       </div>
 
-      <!-- Welcome Message Container (NEW) -->
-      <div class="welcome-container" id="welcome-container">
-        <!-- Welcome message will be inserted here by renderer.js -->
-      </div>
+      <!-- Main Content -->
+      <div class="main-content">
+        <!-- Books Area -->
+        <div class="books-area">
+          <div class="books-header" id="books-header"></div>
+          <div class="books-grid" id="selected-books-list"></div>
+        </div>
 
-      <!-- Books Area -->
-      <div class="books-area">
-        <div class="books-header" id="books-header"></div>
-        <div class="books-grid" id="selected-books-list"></div>
+        <!-- Dynamic Controls -->
+        <div class="dynamic-controls" id="dynamic-controls"></div>
       </div>
-
-      <!-- Dynamic Controls -->
-      <div class="dynamic-controls" id="dynamic-controls"></div>
     </div>
 
     <!-- Confirm Modal -->
